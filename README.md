@@ -34,3 +34,12 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## CloudBase Deployment
+
+- **环境 ID**: `shizhe-3ghk55gxc49f16e4`
+- **部署类型**: 静态网站托管
+- **访问地址**: https://shizhe-3ghk55gxc49f16e4-1330948315.tcloudbaseapp.com/
+- **控制台**: https://tcb.cloud.tencent.com/dev?envId=shizhe-3ghk55gxc49f16e4#/static-hosting
+- **部署方式**: `npm run build` → 静态导出 (`output: "export"`) → 上传 `out/` 目录到 CloudBase 静态托管
+- **最近部署**: 2026-03-17
