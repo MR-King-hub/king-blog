@@ -1,8 +1,5 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
-import WeeklyPicks from "@/components/WeeklyPicks";
-import ScoreMethod from "@/components/ScoreMethod";
-import SourcesWall from "@/components/SourcesWall";
 import Footer from "@/components/Footer";
 
 export default function Home() {
@@ -11,9 +8,6 @@ export default function Home() {
       <Navbar />
       <main>
         <Hero />
-        <WeeklyPicks />
-        <ScoreMethod />
-        <SourcesWall />
       </main>
       <Footer />
     </div>

@@ -252,7 +252,7 @@ export default function WeeklyPicks() {
           >
             {/* Featured card — full width, asymmetric */}
             {featuredItem && (
-              <div className="mb-6">
+              <a href="/article/react-server-components" className="block mb-6">
                 <div className="card-hover group relative grid grid-cols-12 gap-0 rounded-3xl border border-border-accent bg-bg-elevated/40 backdrop-blur-sm overflow-hidden">
                   {/* Score — large decorative */}
                   <div className="col-span-12 sm:col-span-3 lg:col-span-2 flex items-center justify-center p-8 border-b sm:border-b-0 sm:border-r border-border" style={{ background: 'linear-gradient(to bottom right, rgba(201,168,124,0.04), transparent)' }}>
@@ -302,7 +302,7 @@ export default function WeeklyPicks() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </a>
             )}
 
             {/* Regular cards — asymmetric grid */}

@@ -1,45 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# New Blog — Monorepo
 
-## Getting Started
+个人博客系统，包含前端页面和带 AI Agent 的后端服务。
 
-First, run the development server:
+## 项目结构
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+new-blog/
+├── packages/
+│   ├── web/              ← Next.js 博客前端
+│   ├── agent-server/     ← LangGraph Agent + CRUD 后端服务
+│   └── shared/           ← 共享类型定义
+├── pnpm-workspace.yaml
+├── package.json          ← 根 workspace 脚本
+└── tsconfig.json         ← 根 TypeScript 引用
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 技术栈
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| 包 | 技术 |
+|---|---|
+| **web** | Next.js 16, React 19, Tailwind CSS 4, framer-motion |
+| **agent-server** | Hono, LangGraph, LangChain, OpenAI |
+| **shared** | TypeScript 类型定义 |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 快速开始
 
-## Learn More
+### 前置要求
 
-To learn more about Next.js, take a look at the following resources:
+- Node.js 20+
+- pnpm 9+
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 安装依赖
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+pnpm install
+```
 
-## Deploy on Vercel
+### 配置环境变量
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+cp packages/agent-server/.env.example packages/agent-server/.env
+# 编辑 .env 填入你的 OpenAI API Key
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 启动开发
 
-## CloudBase Deployment
+```bash
+# 同时启动前端和后端
+pnpm dev
 
-- **环境 ID**: `shizhe-3ghk55gxc49f16e4`
-- **部署类型**: 静态网站托管
-- **访问地址**: https://shizhe-3ghk55gxc49f16e4-1330948315.tcloudbaseapp.com/
-- **控制台**: https://tcb.cloud.tencent.com/dev?envId=shizhe-3ghk55gxc49f16e4#/static-hosting
-- **部署方式**: `npm run build` → 静态导出 (`output: "export"`) → 上传 `out/` 目录到 CloudBase 静态托管
-- **最近部署**: 2026-03-17
+# 单独启动前端 (localhost:3000)
+pnpm dev:web
+
+# 单独启动后端 (localhost:3001)
+pnpm dev:server
+```
+
+## Agent 说明
+
+### 写作助手 (writing-assistant)
+帮助撰写、润色和优化博客文章内容。
+
+### 内容审核 (content-reviewer)
+审核文章内容，提供结构、语法和 SEO 优化建议。
+
+## API 端点
+
+### 文章 CRUD
+- `GET /api/articles` — 文章列表（支持分页、筛选）
+- `GET /api/articles/:slug` — 文章详情
+- `POST /api/articles` — 创建文章
+- `PUT /api/articles/:slug` — 更新文章
+- `DELETE /api/articles/:slug` — 删除文章
+
+### Agent
+- `POST /api/agents/chat` — 与 Agent 对话（SSE 流式）
+- `GET /api/agents/types` — 获取可用 Agent 列表
+
+### 健康检查
+- `GET /api/health` — 服务状态

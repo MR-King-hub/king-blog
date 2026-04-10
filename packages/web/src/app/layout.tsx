@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BestBlogs — 遇见更好的技术阅读",
+  title: "Shizhe.dev — 全栈工程师 · AI Explorer",
   description:
-    "汇集全球顶级编程、AI、产品、科技内容，AI智能评分辅助阅读，探索技术未来",
+    "全栈工程师的个人网站，记录前端、AI 和全栈开发的技术思考与项目经验。",
 };
 
 export default function RootLayout({

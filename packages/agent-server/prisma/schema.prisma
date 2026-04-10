@@ -1,0 +1,84 @@
+// ═══════════════════════════════════════════════════════════════
+// 📐 Prisma Schema — 数据库的"设计图"
+// ═══════════════════════════════════════════════════════════════
+//
+// 什么是 Prisma？
+//   一个 TypeScript ORM（Object-Relational Mapping）
+//   你用 TypeScript 写查询，Prisma 帮你翻译成 SQL 执行
+//   不用手写 SQL，还有完美的类型推导
+//
+// 什么是 Schema？
+//   就是数据库的"设计图"，定义了：
+//     - 用什么数据库（这里是 SQLite）
+//     - 有哪些表（model）
+//     - 每个表有哪些列（字段）
+//     - 表之间的关系（一对多、多对多等）
+//
+// 工作流：
+//   1. 修改这个文件（加表、加字段）
+//   2. 运行 npx prisma migrate dev → 生成并执行迁移 SQL
+//   3. Prisma 自动生成 TypeScript 类型，代码里直接用
+// ═══════════════════════════════════════════════════════════════
+
+// 数据源配置 — 使用 SQLite（一个文件就是一个数据库，最简单）
+datasource db {
+  provider = "sqlite"
+}
+
+// 客户端生成器 — 自动生成 TypeScript 类型
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ══════════════════════════════════════════════════════════════
+// 📊 数据模型（每个 model 对应数据库里的一张表）
+// ══════════════════════════════════════════════════════════════
+
+/// 用户表
+model User {
+  id           String   @id @default(uuid())  // 主键，自动生成 UUID
+  email        String   @unique               // 邮箱，唯一（不允许重复注册）
+  passwordHash String                         // 哈希后的密码
+  nickname     String                         // 昵称
+  createdAt    DateTime @default(now())       // 创建时间，自动填充
+
+  // 关系：一个用户可以有多篇文章
+  articles     Article[]
+
+  // 表名映射（Prisma 默认用 model 名作为表名）
+  @@map("users")
+}
+
+/// 文章表
+model Article {
+  id         String   @id @default(uuid())
+  slug       String   @unique                // URL 标识符，唯一
+  title      String                          // 标题
+  content    String                          // Markdown 正文
+  summary    String   @default("")           // 摘要
+  coverImage String?                         // 封面图（? 表示可选/可为 null）
+  status     String   @default("draft")      // draft | published
+  category   String?                         // 分类
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt             // 每次更新自动刷新时间
+
+  // 关系：文章属于一个用户
+  authorId   String?                         // 外键（可选，兼容无用户的历史数据）
+  author     User?    @relation(fields: [authorId], references: [id])
+
+  // 关系：文章可以有多个标签（多对多）
+  tags       Tag[]
+
+  @@map("articles")
+}
+
+/// 标签表
+model Tag {
+  id       String    @id @default(uuid())
+  name     String    @unique                // 标签名，唯一
+
+  // 关系：一个标签可以属于多篇文章（多对多）
+  articles Article[]
+
+  @@map("tags")
+}
