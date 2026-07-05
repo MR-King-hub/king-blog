@@ -12,16 +12,16 @@
 set -euo pipefail
 
 SERVER="${DEPLOY_SERVER:-root@43.161.237.30}"
-REMOTE_DIR="${DEPLOY_REMOTE_DIR:-/opt/blog}"
+REMOTE_DIR="${DEPLOY_REMOTE_DIR:-/opt/relayagent}"
 DEPLOY_HOST="${SERVER#*@}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 DEPLOY_ONLY="${DEPLOY_ONLY:-all}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEPLOY_DIR="$REPO_ROOT/deploy"
-IMAGES_TAR="/tmp/blog-images-${IMAGE_TAG}.tar.gz"
+IMAGES_TAR="/tmp/relayagent-images-${IMAGE_TAG}.tar.gz"
 
-API_IMAGE="blog-api:${IMAGE_TAG}"
-WEB_IMAGE="blog-web:${IMAGE_TAG}"
+API_IMAGE="relayagent-api:${IMAGE_TAG}"
+WEB_IMAGE="relayagent-web:${IMAGE_TAG}"
 
 # shellcheck source=ssh-env.sh
 source "$DEPLOY_DIR/ssh-env.sh"

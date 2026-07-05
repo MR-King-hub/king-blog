@@ -3,7 +3,7 @@ import type {
   Project,
   CreateProjectInput,
   UpdateProjectInput,
-} from "@blog/shared";
+} from "@relayagent/shared";
 
 class ProjectStore {
   private toProject(row: {

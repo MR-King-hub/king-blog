@@ -23,7 +23,7 @@ import {
 import MarkdownRenderer, { extractToc } from "./MarkdownRenderer";
 import { articleApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { Article } from "@blog/shared";
+import type { Article } from "@relayagent/shared";
 
 /* ─── Estimate read time ─── */
 function estimateReadTime(text: string): string {

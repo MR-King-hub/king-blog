@@ -5,7 +5,7 @@
 set -euo pipefail
 
 SERVER="${DEPLOY_SERVER:-root@43.161.237.30}"
-REMOTE_DIR="${DEPLOY_REMOTE_DIR:-/opt/blog}"
+REMOTE_DIR="${DEPLOY_REMOTE_DIR:-/opt/relayagent}"
 
 DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=ssh-env.sh
@@ -44,11 +44,17 @@ fi
 
 echo "  → 确保 deploy 数据目录存在..."
 mkdir -p "\$REMOTE_DIR/deploy/data"
-if [ ! -f "\$REMOTE_DIR/deploy/data/blog.db" ]; then
-  for legacy in /opt/blog-server/data/blog.db /opt/blog-server/prod.db /opt/blog-server/dev.db; do
+if [ ! -f "\$REMOTE_DIR/deploy/data/relayagent.db" ]; then
+  for legacy in \
+    "\$REMOTE_DIR/deploy/data/blog.db" \
+    /opt/blog/deploy/data/blog.db \
+    /opt/relayagent-server/data/relayagent.db \
+    /opt/blog-server/data/blog.db \
+    /opt/relayagent-server/prod.db \
+    /opt/relayagent-server/dev.db; do
     if [ -f "\$legacy" ]; then
-      cp "\$legacy" "\$REMOTE_DIR/deploy/data/blog.db"
-      echo "    已复制数据库: \$legacy"
+      cp "\$legacy" "\$REMOTE_DIR/deploy/data/relayagent.db"
+      echo "    已复制数据库: \$legacy → relayagent.db"
       break
     fi
   done
@@ -60,7 +66,7 @@ echo "内存: \$(free -h | awk '/Mem:/{print \$3\"/\"\$2}')"
 ss -tlnp | grep -E ':80 |:3000 |:3001 ' || echo "端口 80/3000/3001: 均未监听 ✓"
 command -v pm2 &>/dev/null && pm2 list 2>/dev/null || true
 docker ps -a 2>/dev/null || true
-du -sh /var/lib/docker "\$REMOTE_DIR" /opt/blog-server /opt/blog-web-next 2>/dev/null
+du -sh /var/lib/docker "\$REMOTE_DIR" /opt/relayagent-server /opt/relayagent-web-next 2>/dev/null
 echo ""
-echo "✅ 清理完成。旧目录 /opt/blog-server /opt/blog-web-next 暂保留，Docker 部署成功后可手动删除。"
+echo "✅ 清理完成。旧目录 /opt/relayagent-server /opt/relayagent-web-next 暂保留，Docker 部署成功后可手动删除。"
 REMOTE_SCRIPT

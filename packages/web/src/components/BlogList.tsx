@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { articleApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { ArticleMeta } from "@blog/shared";
+import type { ArticleMeta } from "@relayagent/shared";
 
 interface BlogPost {
   slug: string;

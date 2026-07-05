@@ -13,9 +13,6 @@ importers:
       '@approval-channel/core':
         specifier: workspace:*
         version: link:../approval-channel
-      '@blog/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@hono/node-server':
         specifier: ^1.13.0
         version: 1.19.14(hono@4.12.27)
@@ -34,6 +31,9 @@ importers:
       '@prisma/client':
         specifier: ^7.7.0
         version: 7.8.0(prisma@7.8.0(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(better-sqlite3@12.11.1)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3))(typescript@5.9.3)
+      '@relayagent/shared':
+        specifier: workspace:*
+        version: link:../shared
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -106,14 +106,14 @@ importers:
         specifier: ^3
         version: 3.2.6(@types/debug@4.1.13)(@types/node@20.19.43)(jiti@2.7.0)(lightningcss@1.32.0)(msw@2.13.3(@types/node@20.19.43)(typescript@5.9.3))(tsx@4.22.4)
 
-  packages/blog-mcp:
+  packages/mcp:
     dependencies:
-      '@blog/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@modelcontextprotocol/sdk':
         specifier: ^1.12.1
         version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@3.25.76)
+      '@relayagent/shared':
+        specifier: workspace:*
+        version: link:../shared
       dotenv:
         specifier: ^16.5.0
         version: 16.6.1
@@ -148,7 +148,7 @@ importers:
       '@base-ui/react':
         specifier: ^1.6.0
         version: 1.6.0(@date-fns/tz@1.4.1)(@types/react@19.2.17)(date-fns@4.1.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      '@blog/shared':
+      '@relayagent/shared':
         specifier: workspace:*
         version: link:../shared
       '@streamdown/cjk':

@@ -4,7 +4,7 @@ import type {
   Project,
   CreateProjectInput,
   UpdateProjectInput,
-} from "@blog/shared";
+} from "@relayagent/shared";
 
 class ProjectService {
   async list(status?: string): Promise<Project[]> {

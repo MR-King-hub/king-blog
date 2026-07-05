@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useHydrated } from "@/hooks/useHydrated";
 import Link from "next/link";
-import type { SiteProfile } from "@blog/shared";
+import type { SiteProfile } from "@relayagent/shared";
 import { BENTO_ICON_MAP, SOCIAL_ICON_MAP } from "@/lib/profile-icons";
 
 interface HeroProps {

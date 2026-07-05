@@ -1,8 +1,8 @@
-name: blog
+name: relayagent
 
 services:
   api:
-    image: blog-api:${IMAGE_TAG:-latest}
+    image: relayagent-api:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: deploy/docker/Dockerfile.agent-server.runtime
@@ -10,16 +10,16 @@ services:
       - .env
     environment:
       PORT: "3001"
-      DATABASE_URL: file:./data/blog.db
+      DATABASE_URL: file:./data/relayagent.db
       NODE_ENV: production
     volumes:
       - ./data:/app/packages/agent-server/data
     restart: unless-stopped
     networks:
-      - blog
+      - relayagent
 
   web:
-    image: blog-web:${IMAGE_TAG:-latest}
+    image: relayagent-web:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: deploy/docker/Dockerfile.web.runtime
@@ -34,7 +34,7 @@ services:
         condition: service_started
     restart: unless-stopped
     networks:
-      - blog
+      - relayagent
 
   nginx:
     image: nginx:1.27-alpine
@@ -47,8 +47,8 @@ services:
       - api
     restart: unless-stopped
     networks:
-      - blog
+      - relayagent
 
 networks:
-  blog:
+  relayagent:
     driver: bridge

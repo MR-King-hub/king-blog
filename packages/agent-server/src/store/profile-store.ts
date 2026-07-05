@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-import type { SiteProfile, UpdateSiteProfileInput } from "@blog/shared";
+import type { SiteProfile, UpdateSiteProfileInput } from "@relayagent/shared";
 import {
   getDefaultProfileSeedData,
   rowToSiteProfile,

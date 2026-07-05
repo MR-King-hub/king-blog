@@ -1,7 +1,7 @@
 import { profileStore } from "../store/profile-store.js";
 import { AppError } from "../middleware/error-handler.js";
 import { parseUpdateSiteProfileInput } from "./profile.validation.js";
-import type { SiteProfile, UpdateSiteProfileInput } from "@blog/shared";
+import type { SiteProfile, UpdateSiteProfileInput } from "@relayagent/shared";
 
 class ProfileService {
   async get(): Promise<SiteProfile> {

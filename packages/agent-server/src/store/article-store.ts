@@ -28,7 +28,7 @@ import type {
   UpdateArticleInput,
   ListArticlesParams,
   PaginatedResponse,
-} from "@blog/shared";
+} from "@relayagent/shared";
 
 class ArticleStore {
   /**

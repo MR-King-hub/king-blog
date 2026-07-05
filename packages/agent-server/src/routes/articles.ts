@@ -24,7 +24,7 @@ import type {
   CreateArticleInput,
   UpdateArticleInput,
   ListArticlesParams,
-} from "@blog/shared";
+} from "@relayagent/shared";
 
 export const articleRoutes = new Hono<AppEnv>();
 

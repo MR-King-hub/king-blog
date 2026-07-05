@@ -94,7 +94,7 @@ else
 fi
 
 # ── 第 6 步：创建项目目录并拉取代码 ──────────────
-PROJECT_DIR="/opt/blog"
+PROJECT_DIR="/opt/relayagent"
 
 if [ -d "$PROJECT_DIR" ]; then
     warn "项目目录 $PROJECT_DIR 已存在"
@@ -169,15 +169,15 @@ log "数据库初始化完成"
 # ── 第 10 步：构建项目 ───────────────────────────
 log "正在构建项目..."
 cd "$PROJECT_DIR"
-pnpm --filter @blog/shared build 2>/dev/null || true
-pnpm --filter @blog/agent-server build
+pnpm --filter @relayagent/shared build 2>/dev/null || true
+pnpm --filter @relayagent/agent-server build
 log "构建完成"
 
 # ── 第 11 步：使用 PM2 启动服务 ──────────────────
 log "正在启动服务..."
 cd "$PROJECT_DIR/packages/agent-server"
-pm2 delete blog-server 2>/dev/null || true
-pm2 start dist/index.js --name blog-server
+pm2 delete relayagent-server 2>/dev/null || true
+pm2 start dist/index.js --name relayagent-server
 pm2 save
 pm2 startup 2>/dev/null || true
 log "服务已启动！"
@@ -185,10 +185,10 @@ log "服务已启动！"
 # ── 第 12 步：配置 Nginx ─────────────────────────
 log "正在配置 Nginx 反向代理..."
 
-NGINX_CONF="/etc/nginx/conf.d/blog-api.conf"
+NGINX_CONF="/etc/nginx/conf.d/relayagent-api.conf"
 # 如果是 Ubuntu/Debian，也可能在 sites-available
 if [ -d "/etc/nginx/sites-available" ]; then
-    NGINX_CONF="/etc/nginx/sites-available/blog-api.conf"
+    NGINX_CONF="/etc/nginx/sites-available/relayagent-api.conf"
 fi
 
 sudo tee "$NGINX_CONF" > /dev/null << 'EOF'
@@ -218,7 +218,7 @@ EOF
 
 # 如果是 Ubuntu/Debian，需要软链接到 sites-enabled
 if [ -d "/etc/nginx/sites-enabled" ]; then
-    sudo ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/blog-api.conf
+    sudo ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/relayagent-api.conf
 fi
 
 # 测试 Nginx 配置
@@ -241,16 +241,16 @@ echo "     内部: http://127.0.0.1:3001"
 echo "     外部: http://$(curl -s ifconfig.me 2>/dev/null || echo '你的服务器IP')/api/health"
 echo ""
 echo "  🔧 常用命令："
-echo "     查看日志:    pm2 logs blog-server"
-echo "     重启服务:    pm2 restart blog-server"
-echo "     停止服务:    pm2 stop blog-server"
+echo "     查看日志:    pm2 logs relayagent-server"
+echo "     重启服务:    pm2 restart relayagent-server"
+echo "     停止服务:    pm2 stop relayagent-server"
 echo "     查看状态:    pm2 status"
 echo ""
 echo "  ⚠️  别忘了："
 echo "     1. 编辑 .env 填写 OPENAI_API_KEY"
-echo "        nano /opt/blog/packages/agent-server/.env"
+echo "        nano /opt/relayagent/packages/agent-server/.env"
 echo "     2. 填写后重启服务"
-echo "        pm2 restart blog-server"
+echo "        pm2 restart relayagent-server"
 echo ""
 echo "  🔒 安全提醒："
 echo "     - 不需要在防火墙开放 3001 端口"

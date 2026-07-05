@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { UpdateSiteProfileInput } from "@blog/shared";
+import type { UpdateSiteProfileInput } from "@relayagent/shared";
 
 const timelineItemSchema = z.object({
   year: z.string().min(1),

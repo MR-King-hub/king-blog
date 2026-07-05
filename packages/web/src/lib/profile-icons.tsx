@@ -1,4 +1,4 @@
-import type { BentoIcon, SocialIcon } from "@blog/shared";
+import type { BentoIcon, SocialIcon } from "@relayagent/shared";
 import {
   Github,
   Twitter,

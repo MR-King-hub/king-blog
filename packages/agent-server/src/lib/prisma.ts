@@ -22,8 +22,8 @@ import "dotenv/config";
 import { PrismaClient } from "../../generated/prisma/client.js";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
-// 数据库文件路径，默认 ./data/blog.db
-const connectionString = process.env.DATABASE_URL || "file:./data/blog.db";
+// 数据库文件路径，默认 ./data/relayagent.db
+const connectionString = process.env.DATABASE_URL || "file:./data/relayagent.db";
 
 // 在 globalThis 上声明类型（TypeScript 需要）
 const globalForPrisma = globalThis as unknown as {

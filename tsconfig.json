@@ -4,6 +4,6 @@
     { "path": "./packages/shared" },
     { "path": "./packages/web" },
     { "path": "./packages/agent-server" },
-    { "path": "./packages/blog-mcp" }
+    { "path": "./packages/mcp" }
   ]
 }

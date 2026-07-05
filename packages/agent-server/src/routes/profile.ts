@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { auth, requireAdmin } from "../middleware/auth.js";
 import { profileService } from "../services/profile.service.js";
 import type { AppEnv } from "../types.js";
-import type { UpdateSiteProfileInput } from "@blog/shared";
+import type { UpdateSiteProfileInput } from "@relayagent/shared";
 
 export const profileRoutes = new Hono<AppEnv>();
 

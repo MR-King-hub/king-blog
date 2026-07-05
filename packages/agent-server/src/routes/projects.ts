@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { auth, requireAdmin } from "../middleware/auth.js";
 import { projectService } from "../services/project.service.js";
 import type { AppEnv } from "../types.js";
-import type { CreateProjectInput, UpdateProjectInput } from "@blog/shared";
+import type { CreateProjectInput, UpdateProjectInput } from "@relayagent/shared";
 
 export const projectRoutes = new Hono<AppEnv>();
 

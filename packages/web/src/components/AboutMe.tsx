@@ -9,7 +9,7 @@ import {
   Heart,
   ArrowUpRight,
 } from "lucide-react";
-import type { SiteProfile } from "@blog/shared";
+import type { SiteProfile } from "@relayagent/shared";
 import { SOCIAL_ICON_MAP } from "@/lib/profile-icons";
 
 interface AboutMeProps {

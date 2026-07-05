@@ -7,7 +7,7 @@ import Navbar from "@/components/Navbar";
 import ProfileEditor from "@/components/admin/ProfileEditor";
 import { useAuth } from "@/lib/auth";
 import { profileApi } from "@/lib/api";
-import type { SiteProfile, UpdateSiteProfileInput } from "@blog/shared";
+import type { SiteProfile, UpdateSiteProfileInput } from "@relayagent/shared";
 
 function toUpdateInput(profile: SiteProfile): UpdateSiteProfileInput {
   const {

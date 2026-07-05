@@ -9,17 +9,17 @@
  *
  * 使用方式：
  *   启动:   pm2 start ecosystem.config.cjs
- *   停止:   pm2 stop blog-server
- *   重启:   pm2 restart blog-server
- *   日志:   pm2 logs blog-server
+ *   停止:   pm2 stop relayagent-server
+ *   重启:   pm2 restart relayagent-server
+ *   日志:   pm2 logs relayagent-server
  *   监控:   pm2 monit
  */
 module.exports = {
   apps: [
     {
-      name: "blog-server",          // 进程名称
+      name: "relayagent-server",          // 进程名称
       script: "dist/index.js",      // 入口文件（构建后的）
-      cwd: "/opt/blog-server", // 工作目录
+      cwd: "/opt/relayagent-server", // 工作目录
       
       // 环境变量
       env: {
@@ -27,8 +27,8 @@ module.exports = {
       },
 
       // 日志配置
-      error_file: "/opt/blog-server/logs/error.log",
-      out_file: "/opt/blog-server/logs/output.log",
+      error_file: "/opt/relayagent-server/logs/error.log",
+      out_file: "/opt/relayagent-server/logs/output.log",
       log_date_format: "YYYY-MM-DD HH:mm:ss",
       
       // 自动重启配置

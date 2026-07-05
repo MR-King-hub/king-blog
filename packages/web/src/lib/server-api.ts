@@ -1,4 +1,4 @@
-import type { SiteProfile } from "@blog/shared";
+import type { SiteProfile } from "@relayagent/shared";
 
 const API_BASE =
   process.env.INTERNAL_API_URL ||

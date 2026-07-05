@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { projectApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { Project, CreateProjectInput } from "@blog/shared";
+import type { Project, CreateProjectInput } from "@relayagent/shared";
 
 /* ─── Gradient palette ─── */
 const gradients = [

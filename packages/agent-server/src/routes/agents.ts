@@ -22,7 +22,7 @@
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 // ↑ Hono 内置的 SSE 流式工具，帮你处理好 HTTP 头和格式
-import type { AgentRequest } from "@blog/shared";
+import type { AgentRequest } from "@relayagent/shared";
 import { getAgent } from "../agents/index.js";
 import { auth } from "../middleware/auth.js";
 import type { AppEnv } from "../types.js";

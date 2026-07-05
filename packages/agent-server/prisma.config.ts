@@ -12,8 +12,8 @@ import "dotenv/config";
 import path from "node:path";
 import { defineConfig } from "prisma/config";
 
-// 默认使用 ./data/blog.db，可通过 DATABASE_URL 环境变量覆盖
-const databaseUrl = process.env.DATABASE_URL || "file:./data/blog.db";
+// 默认使用 ./data/relayagent.db，可通过 DATABASE_URL 环境变量覆盖
+const databaseUrl = process.env.DATABASE_URL || "file:./data/relayagent.db";
 
 export default defineConfig({
   schema: path.join(import.meta.dirname, "prisma", "schema.prisma"),

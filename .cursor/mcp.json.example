@@ -1,13 +1,13 @@
 {
   "mcpServers": {
-    "blog": {
+    "relayagent": {
       "command": "pnpm",
-      "args": ["--filter", "@blog/mcp", "start"],
-      "cwd": "/Users/shizhe/personal/new-blog",
+      "args": ["--filter", "@relayagent/mcp", "start"],
+      "cwd": "/Users/shizhe/personal/relayagent",
       "env": {
-        "BLOG_API_URL": "http://localhost:3001",
-        "BLOG_ADMIN_EMAIL": "admin@example.com",
-        "BLOG_ADMIN_PASSWORD": "change-me-please"
+        "RELAYAGENT_API_URL": "http://localhost:3001",
+        "RELAYAGENT_ADMIN_EMAIL": "admin@example.com",
+        "RELAYAGENT_ADMIN_PASSWORD": "change-me-please"
       }
     }
   }

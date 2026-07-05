@@ -5,7 +5,7 @@
  *   1. 统一管理 API 地址（改一处，全局生效）
  *   2. 统一处理错误（不用每个组件自己 try-catch）
  *   3. 统一携带 token（登录后自动带上身份凭证）
- *   4. 类型安全（用 @blog/shared 的类型定义）
+ *   4. 类型安全（用 @relayagent/shared 的类型定义）
  */
 
 import type {
@@ -22,7 +22,7 @@ import type {
   UpdateProjectInput,
   SiteProfile,
   UpdateSiteProfileInput,
-} from "@blog/shared";
+} from "@relayagent/shared";
 
 // ── API 基地址 ─────────────────────────────────
 // 开发时：http://localhost:3001
@@ -33,15 +33,15 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 // 把 token 存在 localStorage 里，页面刷新后还在
 function getToken(): string | null {
   if (typeof window === "undefined") return null; // 服务端渲染时没有 localStorage
-  return localStorage.getItem("blog_token");
+  return localStorage.getItem("relayagent_token");
 }
 
 export function setToken(token: string) {
-  localStorage.setItem("blog_token", token);
+  localStorage.setItem("relayagent_token", token);
 }
 
 export function removeToken() {
-  localStorage.removeItem("blog_token");
+  localStorage.removeItem("relayagent_token");
 }
 
 // ── 通用请求函数 ────────────────────────────────

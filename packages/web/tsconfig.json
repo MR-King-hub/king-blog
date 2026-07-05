@@ -20,7 +20,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@blog/shared": ["../shared/src/index.ts"]
+      "@relayagent/shared": ["../shared/src/index.ts"]
     }
   },
   "include": [

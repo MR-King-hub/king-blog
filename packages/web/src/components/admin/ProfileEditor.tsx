@@ -18,7 +18,7 @@ import type {
   HeroBentoItem,
   SocialIcon,
   BentoIcon,
-} from "@blog/shared";
+} from "@relayagent/shared";
 
 const inputClass =
   "w-full px-3 py-2 rounded-xl border border-border bg-bg-surface/60 text-text-primary text-sm font-heading outline-none focus:border-accent/30 transition-all";

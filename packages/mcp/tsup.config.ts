@@ -8,5 +8,5 @@ export default defineConfig({
   banner: {
     js: "#!/usr/bin/env node",
   },
-  noExternal: ["@blog/shared"],
+  noExternal: ["@relayagent/shared"],
 });

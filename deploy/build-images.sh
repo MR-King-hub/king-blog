@@ -33,7 +33,7 @@ build_web() {
 build_api() {
   echo "  → 编译 api..."
   cd "$REPO_ROOT"
-  pnpm --filter @blog/agent-server build
+  pnpm --filter @relayagent/agent-server build
 }
 
 echo "🔨 第 1 步: 本地 pnpm 编译 (DEPLOY_ONLY=$DEPLOY_ONLY)..."
@@ -61,4 +61,4 @@ esac
 
 echo ""
 echo "✅ 镜像已构建:"
-docker images --format "  {{.Repository}}:{{.Tag}}  {{.Size}}" | grep -E '^blog-(api|web):' || true
+docker images --format "  {{.Repository}}:{{.Tag}}  {{.Size}}" | grep -E '^relayagent-(api|web):' || true

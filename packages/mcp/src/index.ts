@@ -307,7 +307,7 @@ async function main() {
   const client = createBlogApiClientFromEnv();
 
   const server = new McpServer({
-    name: "blog-mcp",
+    name: "relayagent-mcp",
     version: "0.1.0",
   });
 
@@ -318,10 +318,10 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error("blog-mcp server running (stdio)");
+  console.error("relayagent-mcp server running (stdio)");
 }
 
 main().catch((error) => {
-  console.error("blog-mcp failed to start:", error);
+  console.error("relayagent-mcp failed to start:", error);
   process.exit(1);
 });

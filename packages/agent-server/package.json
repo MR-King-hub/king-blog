@@ -1,5 +1,5 @@
 {
-  "name": "@blog/agent-server",
+  "name": "@relayagent/agent-server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@approval-channel/core": "workspace:*",
-    "@blog/shared": "workspace:*",
+    "@relayagent/shared": "workspace:*",
     "@hono/node-server": "^1.13.0",
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",

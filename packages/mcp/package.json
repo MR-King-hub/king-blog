@@ -1,11 +1,11 @@
 {
-  "name": "@blog/mcp",
+  "name": "@relayagent/mcp",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "MCP server for managing blog content via agent-server REST API",
+  "description": "MCP server for managing RelayAgent site content via REST API",
   "bin": {
-    "blog-mcp": "./dist/index.js"
+    "relayagent-mcp": "./dist/index.js"
   },
   "scripts": {
     "dev": "tsx src/index.ts",
@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@blog/shared": "workspace:*",
+    "@relayagent/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.12.1",
     "dotenv": "^16.5.0",
     "zod": "^3.24.0"

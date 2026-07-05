@@ -13,7 +13,7 @@
  *   - 测试时可以用一个假的 Agent（Mock）替代真实的
  */
 
-import type { AgentStreamEvent } from "@blog/shared";
+import type { AgentStreamEvent } from "@relayagent/shared";
 
 /** Agent 调用时的上下文信息 */
 export interface AgentContext {

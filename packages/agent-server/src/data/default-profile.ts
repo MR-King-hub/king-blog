@@ -5,7 +5,7 @@ import type {
   SkillCategory,
   SocialLink,
   HeroBentoItem,
-} from "@blog/shared";
+} from "@relayagent/shared";
 
 const DEFAULT_PROFILE: Omit<SiteProfile, "updatedAt"> = {
   name: "Shizhe",

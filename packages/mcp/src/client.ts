@@ -10,7 +10,7 @@ import type {
   UpdateProjectInput,
   SiteProfile,
   UpdateSiteProfileInput,
-} from "@blog/shared";
+} from "@relayagent/shared";
 
 interface ApiSuccess<T> {
   success: true;
@@ -202,13 +202,18 @@ export class BlogApiClient {
 }
 
 export function createBlogApiClientFromEnv(): BlogApiClient {
-  const baseUrl = process.env.BLOG_API_URL || "http://localhost:3001";
-  const email = process.env.BLOG_ADMIN_EMAIL;
-  const password = process.env.BLOG_ADMIN_PASSWORD;
+  const baseUrl =
+    process.env.RELAYAGENT_API_URL ||
+    process.env.BLOG_API_URL ||
+    "http://localhost:3001";
+  const email =
+    process.env.RELAYAGENT_ADMIN_EMAIL || process.env.BLOG_ADMIN_EMAIL;
+  const password =
+    process.env.RELAYAGENT_ADMIN_PASSWORD || process.env.BLOG_ADMIN_PASSWORD;
 
   if (!email || !password) {
     throw new Error(
-      "缺少 BLOG_ADMIN_EMAIL 或 BLOG_ADMIN_PASSWORD 环境变量",
+      "缺少 RELAYAGENT_ADMIN_EMAIL 或 RELAYAGENT_ADMIN_PASSWORD 环境变量",
     );
   }
 

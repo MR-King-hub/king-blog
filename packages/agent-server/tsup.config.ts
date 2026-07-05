@@ -6,5 +6,5 @@ export default defineConfig({
   dts: true,
   clean: true,
   // workspace 包必须打进产物，服务器上没有 monorepo
-  noExternal: ["@approval-channel/core", "@blog/shared"],
+  noExternal: ["@approval-channel/core", "@relayagent/shared"],
 });

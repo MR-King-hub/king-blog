@@ -22,13 +22,13 @@ Nginx :80
 
 ## 数据库（SQLite）
 
-生产数据保存在 **`deploy/data/blog.db`**，通过 volume 挂载进 `api` 容器：
+生产数据保存在 **`deploy/data/relayagent.db`**，通过 volume 挂载进 `api` 容器：
 
 ```yaml
 volumes:
   - ./data:/app/packages/agent-server/data
 environment:
-  DATABASE_URL: file:./data/blog.db
+  DATABASE_URL: file:./data/relayagent.db
 ```
 
 ### 设计约束
@@ -42,16 +42,16 @@ environment:
 推荐在维护窗口内备份（停服后复制最稳妥）：
 
 ```bash
-cd /opt/blog/deploy
+cd /opt/relayagent/deploy
 
 # 方式一：停服后备份（推荐）
 docker compose stop api
-cp data/blog.db "data/blog.db.$(date +%Y%m%d-%H%M%S).bak"
+cp data/relayagent.db "data/relayagent.db.$(date +%Y%m%d-%H%M%S).bak"
 docker compose start api
 
 # 方式二：在线备份（SQLite 内置命令，需容器内 sqlite3）
-docker compose exec api sh -c 'sqlite3 data/blog.db ".backup /tmp/blog-backup.db"'
-docker cp "$(docker compose ps -q api):/tmp/blog-backup.db" "./data/blog.db.$(date +%Y%m%d).bak"
+docker compose exec api sh -c 'sqlite3 data/relayagent.db ".backup /tmp/relayagent-backup.db"'
+docker cp "$(docker compose ps -q api):/tmp/relayagent-backup.db" "./data/relayagent.db.$(date +%Y%m%d).bak"
 ```
 
 定期把 `.bak` 文件同步到对象存储或另一台机器。
@@ -59,15 +59,33 @@ docker cp "$(docker compose ps -q api):/tmp/blog-backup.db" "./data/blog.db.$(da
 ### 恢复
 
 ```bash
-cd /opt/blog/deploy
+cd /opt/relayagent/deploy
 
 docker compose stop api
-cp data/blog.db data/blog.db.before-restore   # 可选：保留当前损坏库
-cp /path/to/your-backup.db data/blog.db
+cp data/relayagent.db data/relayagent.db.before-restore   # 可选：保留当前损坏库
+cp /path/to/your-backup.db data/relayagent.db
 docker compose start api
 ```
 
 恢复后若 schema 版本落后，再执行 `docker compose exec api npx prisma migrate deploy`。
+
+## 从旧名称迁移
+
+若此前使用 `king-blog` / `new-blog` 或 `/opt/blog` 部署：
+
+| 旧 | 新 |
+|----|-----|
+| GitHub 仓库 `king-blog` | `relayagent` |
+| `/opt/blog` | `/opt/relayagent`（或设置 `DEPLOY_REMOTE_DIR`） |
+| Docker 镜像 `blog-api` / `blog-web` | `relayagent-api` / `relayagent-web` |
+| `deploy/data/blog.db` | `deploy/data/relayagent.db` |
+
+服务器上若已有 `blog.db`，首次迁移可执行：
+
+```bash
+cd /opt/relayagent/deploy   # 或你的 DEPLOY_REMOTE_DIR
+cp data/blog.db data/relayagent.db   # 若尚未改名
+```
 
 ## 前置条件
 
@@ -124,14 +142,14 @@ bash deploy/deploy.sh
 |------|------|
 | `DEPLOY_SERVER` | SSH 目标，默认 `root@43.161.237.30` |
 | `DEPLOY_SSH_KEY` | SSH 私钥；香港自动用 `~/.ssh/hongkong.pem` |
-| `DEPLOY_REMOTE_DIR` | 远程目录，默认 `/opt/blog` |
+| `DEPLOY_REMOTE_DIR` | 远程目录，默认 `/opt/relayagent` |
 | `DEPLOY_ONLY` | `web` / `api` / `all`（默认），只构建上传指定服务 |
 | `DEPLOY_SKIP_BUILD` | `1` = 跳过本地构建，只上传配置并重启 |
 | `DEPLOY_FORCE` | `1` = 强制上传，忽略 digest 检测 |
 | `IMAGE_TAG` | 镜像标签，默认 `latest` |
 | `HTTP_PORT` | 在服务器 `deploy/.env` 中设置，默认 80 |
 
-生产密钥写在服务器 **`/opt/blog/deploy/.env`**，不要提交到 git。
+生产密钥写在服务器 **`/opt/relayagent/deploy/.env`**，不要提交到 git。
 
 ## 仅本地构建镜像
 
@@ -150,7 +168,7 @@ docker compose up --build
 ## 服务器运维
 
 ```bash
-cd /opt/blog/deploy
+cd /opt/relayagent/deploy
 
 docker compose ps
 docker compose logs -f api

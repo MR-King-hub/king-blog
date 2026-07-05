@@ -12,7 +12,7 @@
  *   路由代码一行都不用改
  */
 
-import type { AgentType } from "@blog/shared";
+import type { AgentType } from "@relayagent/shared";
 import { writingAssistant } from "./writing-assistant.js";
 import { contentReviewer } from "./content-reviewer.js";
 import type { BaseAgent } from "./base.js";

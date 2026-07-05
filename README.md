@@ -1,17 +1,17 @@
-# New Blog — Monorepo
+# RelayAgent
 
-个人博客系统，包含前端页面和带 AI Agent 的后端服务。
+个人博客 + AI Agent 系统（Monorepo）。GitHub 仓库名：**relayagent**。
 
 **定位**：单租户、自托管的个人站模板——适合 fork 后部署自己的博客，不是多用户 SaaS 平台。
 
 ## 项目结构
 
 ```
-new-blog/
+relayagent/
 ├── packages/
 │   ├── web/              ← Next.js 博客前端
 │   ├── agent-server/     ← LangGraph Agent + CRUD 后端服务
-│   ├── blog-mcp/         ← Cursor MCP（管理员改内容）
+│   ├── mcp/              ← Cursor MCP（管理员改内容）
 │   └── shared/           ← 共享类型定义
 ├── pnpm-workspace.yaml
 ├── package.json          ← 根 workspace 脚本
@@ -24,7 +24,7 @@ new-blog/
 |---|---|
 | **web** | Next.js 16, React 19, Tailwind CSS 4, framer-motion |
 | **agent-server** | Hono, LangGraph, LangChain, Prisma, SQLite |
-| **blog-mcp** | MCP Server（Cursor 管理文章/项目/个人资料） |
+| **mcp** | MCP Server（Cursor 管理文章/项目/个人资料） |
 | **shared** | TypeScript 类型定义 |
 
 ## 数据库
@@ -34,7 +34,7 @@ new-blog/
 | 环境 | 路径 | 说明 |
 |------|------|------|
 | 本地开发 | `packages/agent-server/dev.db` | 由 `DATABASE_URL` 指定 |
-| Docker 生产 | `deploy/data/blog.db` | 挂载到容器内 `./data/blog.db` |
+| Docker 生产 | `deploy/data/relayagent.db` | 挂载到容器内 `./data/relayagent.db` |
 
 **为什么用 SQLite？** 零依赖、部署简单，对个人博客的读写量完全够用。
 
@@ -115,8 +115,8 @@ pnpm dev:server
 在 Cursor 里通过 MCP 直接管理文章、项目和个人资料，无需手动调 API。
 
 ```bash
-pnpm --filter @blog/mcp build
-cp packages/blog-mcp/.env.example packages/blog-mcp/.env
+pnpm --filter @relayagent/mcp build
+cp packages/mcp/.env.example packages/mcp/.env
 cp .cursor/mcp.json.example .cursor/mcp.json   # 按需修改路径和账号
 ```
 
@@ -124,7 +124,7 @@ cp .cursor/mcp.json.example .cursor/mcp.json   # 按需修改路径和账号
 
 配置好后重启 Cursor，即可用自然语言操作，例如「列出草稿」「发布某篇文章」「更新简历时间线」。
 
-详见 [packages/blog-mcp/README.md](./packages/blog-mcp/README.md)。
+详见 [packages/mcp/README.md](./packages/mcp/README.md)。
 
 ## 部署
 
