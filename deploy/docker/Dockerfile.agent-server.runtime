@@ -12,7 +12,7 @@ RUN apt-get update \
 
 ENV NODE_ENV=production
 ENV PORT=3001
-ENV DATABASE_URL=file:./data/blog.db
+ENV DATABASE_URL=file:./data/relayagent.db
 
 COPY packages/agent-server/package.json ./package.json
 COPY deploy/docker/agent-entrypoint.sh /entrypoint.sh
@@ -20,7 +20,7 @@ COPY deploy/docker/agent-entrypoint.sh /entrypoint.sh
 # 依赖层：package.json 不变则缓存命中，跳过 pnpm install + 编译
 RUN node -e " \
   const pkg = JSON.parse(require('fs').readFileSync('package.json','utf8')); \
-  delete pkg.dependencies['@blog/shared']; \
+  delete pkg.dependencies['@relayagent/shared']; \
   delete pkg.dependencies['@approval-channel/core']; \
   pkg.pnpm = pkg.pnpm || {}; \
   pkg.pnpm.onlyBuiltDependencies = ['@prisma/engines', 'better-sqlite3', 'prisma']; \

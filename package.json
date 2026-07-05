@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "ulimit -n 10240; pkill -f 'tsx/dist' 2>/dev/null; pkill -f 'next-server' 2>/dev/null; sleep 2; pnpm --parallel -r run dev",
+    "dev": "ulimit -n 10240; pkill -f 'tsx/dist' 2>/dev/null; pkill -f 'next-server' 2>/dev/null; sleep 2; pnpm --parallel --filter @relayagent/web --filter @relayagent/agent-server --filter @relayagent/mcp run dev",
     "dev:web": "pnpm --filter @relayagent/web dev",
     "dev:server": "pnpm --filter @relayagent/agent-server dev",
+    "dev:mcp": "pnpm --filter @relayagent/mcp dev",
     "build": "pnpm -r run build",
     "build:web": "pnpm --filter @relayagent/web build",
     "build:server": "pnpm --filter @relayagent/agent-server build",

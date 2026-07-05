@@ -287,18 +287,36 @@ export default function AgentConfigPage() {
 
             {/* 系统提示词 */}
             <section className="rounded-2xl border border-border bg-bg-surface/50 p-6">
-              <h2 className="text-lg font-heading font-semibold text-text-primary mb-2">
-                系统提示词
-              </h2>
-              <p className="text-xs text-text-tertiary mb-4">
-                定义 AI 助手的人设、能力范围和行为边界。博客文章列表会自动注入，无需在这里重复。
-              </p>
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h2 className="text-lg font-heading font-semibold text-text-primary mb-2">
+                    系统提示词
+                  </h2>
+                  <p className="text-xs text-text-tertiary leading-relaxed">
+                    定义 AI 助手的人设与行为。支持{" "}
+                    <code className="text-accent/80">{"{ownerName}"}</code>{" "}
+                    占位符，对话时会替换为站点资料中的名字。博客文章会在对话时自动补充，无需写在这里。
+                  </p>
+                </div>
+                {config.defaultSystemPrompt && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateField("systemPrompt", config.defaultSystemPrompt!)
+                    }
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading text-text-tertiary hover:text-accent hover:bg-accent/5 border border-border/60 transition-colors cursor-pointer"
+                  >
+                    <RefreshCw size={12} />
+                    恢复默认
+                  </button>
+                )}
+              </div>
               <textarea
                 value={config.systemPrompt}
                 onChange={(e) => updateField("systemPrompt", e.target.value)}
-                rows={12}
+                rows={14}
                 className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-border text-text-primary text-sm font-mono leading-relaxed focus:border-accent/40 focus:outline-none transition-colors resize-y"
-                placeholder="你是 XXX 的个人 AI 助手..."
+                placeholder="你是博主 {ownerName} 个人博客上的 AI 助手..."
               />
             </section>
 

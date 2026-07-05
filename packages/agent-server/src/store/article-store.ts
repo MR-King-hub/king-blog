@@ -21,6 +21,11 @@
  */
 
 import { prisma } from "../lib/prisma.js";
+import {
+  isValidSlug,
+  normalizeSlug,
+  slugifyTitle,
+} from "../utils/slug.js";
 import type {
   Article,
   ArticleMeta,
@@ -31,19 +36,32 @@ import type {
 } from "@relayagent/shared";
 
 class ArticleStore {
-  /**
-   * 生成 slug（和之前一样的逻辑）
-   */
-  private slugify(title: string): string {
-    return (
-      title
-        .toLowerCase()
-        .replace(/[^\w\u4e00-\u9fa5]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .substring(0, 80) +
-      "-" +
-      Date.now().toString(36)
-    );
+  private resolveBaseSlug(title: string, slug?: string): string {
+    const base = slug ? normalizeSlug(slug) : slugifyTitle(title);
+    if (!isValidSlug(base)) {
+      throw new Error(`无效的 slug: ${base}`);
+    }
+    return base;
+  }
+
+  private async ensureUniqueSlug(
+    base: string,
+    excludeSlug?: string,
+  ): Promise<string> {
+    let candidate = base;
+    let suffix = 2;
+
+    while (true) {
+      const existing = await prisma.article.findUnique({
+        where: { slug: candidate },
+        select: { slug: true },
+      });
+      if (!existing || existing.slug === excludeSlug) {
+        return candidate;
+      }
+      candidate = `${base}-${suffix}`;
+      suffix += 1;
+    }
   }
 
   /**
@@ -142,7 +160,8 @@ class ArticleStore {
   }
 
   async create(input: CreateArticleInput): Promise<Article> {
-    const slug = this.slugify(input.title);
+    const baseSlug = this.resolveBaseSlug(input.title, input.slug);
+    const slug = await this.ensureUniqueSlug(baseSlug);
 
     /**
      * Prisma 的 connectOrCreate 语法：
@@ -179,6 +198,15 @@ class ArticleStore {
     const existing = await prisma.article.findUnique({ where: { slug } });
     if (!existing) return null;
 
+    let nextSlug = slug;
+    if (input.slug !== undefined) {
+      const baseSlug = this.resolveBaseSlug(
+        input.title ?? existing.title,
+        input.slug,
+      );
+      nextSlug = await this.ensureUniqueSlug(baseSlug, slug);
+    }
+
     /**
      * 标签更新策略：先断开所有旧标签，再连接新标签
      *
@@ -188,6 +216,7 @@ class ArticleStore {
     const row = await prisma.article.update({
       where: { slug },
       data: {
+        ...(nextSlug !== slug && { slug: nextSlug }),
         ...(input.title !== undefined && { title: input.title }),
         ...(input.content !== undefined && { content: input.content }),
         ...(input.summary !== undefined && { summary: input.summary }),

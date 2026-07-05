@@ -8,11 +8,8 @@ import {
   Clock,
   Calendar,
   Share2,
-  Bookmark,
   ChevronRight,
   Check,
-  MessageSquare,
-  ThumbsUp,
   ArrowUpRight,
   Tag,
   Zap,
@@ -44,7 +41,6 @@ export default function ArticleDetail({ slug }: ArticleDetailProps) {
   const [error, setError] = useState("");
   const [activeSection, setActiveSection] = useState("");
   const [copied, setCopied] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
   const [tocOpen, setTocOpen] = useState(false);
   const articleRef = useRef<HTMLDivElement>(null);
   const { isAdmin } = useAuth();
@@ -203,15 +199,6 @@ export default function ArticleDetail({ slug }: ArticleDetailProps) {
               {copied ? <Check size={14} className="text-[#6B9B97]" /> : <Share2 size={14} />}
               {copied ? "已复制" : "分享"}
             </button>
-            <button
-              onClick={() => setBookmarked(!bookmarked)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-xs font-heading ${
-                bookmarked ? "text-accent bg-accent/10" : "text-text-secondary hover:text-accent hover:bg-accent/5"
-              }`}
-            >
-              <Bookmark size={14} fill={bookmarked ? "currentColor" : "none"} />
-              {bookmarked ? "已收藏" : "收藏"}
-            </button>
           </div>
         </div>
       </motion.nav>
@@ -230,9 +217,9 @@ export default function ArticleDetail({ slug }: ArticleDetailProps) {
               目录导航
             </h4>
             <nav className="space-y-1">
-              {tocItems.map((item) => (
+              {tocItems.map((item, index) => (
                 <button
-                  key={item.id}
+                  key={`${item.id}-${index}`}
                   onClick={() => scrollToSection(item.id)}
                   className={`block w-full text-left px-3 py-2 rounded-lg text-sm font-heading transition-all ${
                     item.level === 2 ? "pl-6" : ""
@@ -383,31 +370,12 @@ export default function ArticleDetail({ slug }: ArticleDetailProps) {
                 <div className="flex-1 h-px" style={{ background: 'linear-gradient(to left, transparent, rgba(201,168,124,0.15))' }} />
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border bg-bg-elevated text-text-secondary text-sm font-heading hover:border-accent/20 hover:text-accent transition-all">
-                  <ThumbsUp size={14} />
-                  有用 · 128
-                </button>
-                <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border bg-bg-elevated text-text-secondary text-sm font-heading hover:border-accent/20 hover:text-accent transition-all">
-                  <MessageSquare size={14} />
-                  讨论 · 23
-                </button>
                 <button
                   onClick={handleCopyLink}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border bg-bg-elevated text-text-secondary text-sm font-heading hover:border-accent/20 hover:text-accent transition-all"
                 >
                   <Share2 size={14} />
                   {copied ? "已复制链接" : "分享"}
-                </button>
-                <button
-                  onClick={() => setBookmarked(!bookmarked)}
-                  className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border text-sm font-heading transition-all ${
-                    bookmarked
-                      ? "border-accent/30 bg-accent/10 text-accent"
-                      : "border-border bg-bg-elevated text-text-secondary hover:border-accent/20 hover:text-accent"
-                  }`}
-                >
-                  <Bookmark size={14} fill={bookmarked ? "currentColor" : "none"} />
-                  {bookmarked ? "已收藏" : "收藏"}
                 </button>
               </div>
 
@@ -445,9 +413,9 @@ export default function ArticleDetail({ slug }: ArticleDetailProps) {
                   </h4>
                 </div>
                 <nav className="space-y-0.5">
-                  {tocItems.map((item) => (
+                  {tocItems.map((item, index) => (
                     <button
-                      key={item.id}
+                      key={`${item.id}-${index}`}
                       onClick={() => scrollToSection(item.id)}
                       className={`block w-full text-left px-3 py-1.5 rounded-lg text-[13px] font-heading transition-all duration-200 ${
                         item.level === 2 ? "pl-6" : ""

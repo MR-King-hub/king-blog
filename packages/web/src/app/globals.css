@@ -296,7 +296,7 @@ body::before {
 }
 
 .article-prose a {
-  color: var(--accent);
+  color: var(--color-accent);
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--accent-dim);
@@ -359,18 +359,22 @@ body::before {
   padding: 0.15em 0.4em;
   font-family: var(--font-mono);
   font-size: 0.88em;
-  color: var(--accent);
+  color: var(--color-accent);
 }
 
 /* ---- highlight.js theme — custom dark matching our palette ---- */
 .hljs {
-  color: #7E8A9E;
+  color: var(--text-primary);
   background: transparent;
+}
+
+.article-prose pre .hljs {
+  color: var(--text-primary);
 }
 
 .hljs-comment,
 .hljs-quote {
-  color: #525E74;
+  color: #9AA8BC;
   font-style: italic;
 }
 

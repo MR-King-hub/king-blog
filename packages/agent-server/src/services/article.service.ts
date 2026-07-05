@@ -35,6 +35,7 @@
 
 import { articleStore } from "../store/article-store.js";
 import { AppError } from "../middleware/error-handler.js";
+import { normalizeSlug } from "../utils/slug.js";
 import type {
   Article,
   ArticleMeta,
@@ -81,6 +82,9 @@ class ArticleService {
     if (!input.content?.trim()) {
       throw new AppError(400, "VALIDATION_ERROR", "内容不能为空");
     }
+    if (input.slug !== undefined && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalizeSlug(input.slug))) {
+      throw new AppError(400, "VALIDATION_ERROR", "slug 仅支持小写字母、数字和连字符");
+    }
 
     // 自动生成摘要（如果没提供）
     if (!input.summary) {
@@ -101,6 +105,13 @@ class ArticleService {
    * 2. 未来可加：只有作者或管理员能编辑
    */
   async update(slug: string, input: UpdateArticleInput): Promise<Article> {
+    if (input.slug !== undefined) {
+      const normalized = normalizeSlug(input.slug);
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized)) {
+        throw new AppError(400, "VALIDATION_ERROR", "slug 仅支持小写字母、数字和连字符");
+      }
+    }
+
     const article = await articleStore.update(slug, input);
     if (!article) {
       throw new AppError(404, "NOT_FOUND", `文章 "${slug}" 不存在`);

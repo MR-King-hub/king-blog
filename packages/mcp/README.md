@@ -41,35 +41,19 @@ cp packages/mcp/.env.example packages/mcp/.env
 # 编辑 .env，填入与 agent-server 一致的管理员账号
 ```
 
-## Cursor 配置
+## Cursor 配置（用户级）
 
-复制示例配置到项目或全局 MCP 配置：
+写入 `~/.cursor/mcp.json`（Customize → **User** 范围，会自动连接）：
 
 ```bash
-cp .cursor/mcp.json.example .cursor/mcp.json
-# 编辑 .env 和管理员密码
+pnpm --filter @relayagent/mcp build
+cp .cursor/mcp.json.example ~/.cursor/mcp.json
+# 改路径和密码；macOS+nvm 用户将 command 改为 node 绝对路径（which node）
 ```
 
-或在 `~/.cursor/mcp.json` 中添加：
+重启 Cursor 后，Customize → MCPs → **User** 里应能看到 `relayagent`（绿色）。
 
-```json
-{
-  "mcpServers": {
-    "relayagent": {
-      "command": "pnpm",
-      "args": ["--filter", "@relayagent/mcp", "start"],
-      "cwd": "/path/to/relayagent",
-      "env": {
-        "RELAYAGENT_API_URL": "http://localhost:3001",
-        "RELAYAGENT_ADMIN_EMAIL": "admin@example.com",
-        "RELAYAGENT_ADMIN_PASSWORD": "your-password"
-      }
-    }
-  }
-}
-```
-
-开发调试可用 `pnpm --filter @relayagent/mcp dev` 代替 `start`。
+开发调试可用 `pnpm --filter @relayagent/mcp dev` 代替 build + start。
 
 也可以在浏览器管理：**登录 → 「资料」→ `/admin/profile`**，与 MCP 的 `update_profile` 写入同一份数据。
 

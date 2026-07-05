@@ -28,7 +28,10 @@ import type { AgentConfigData } from "../store/agent-config-store.js";
 import { chatLogStore } from "../store/chat-log-store.js";
 import { articleStore } from "../store/article-store.js";
 import { pendingTaskStore } from "../store/pending-task-store.js";
+import { profileStore } from "../store/profile-store.js";
+import { buildChatSystemPrompt } from "../data/default-agent-config.js";
 import { detectAndCreateTask } from "../services/task-manager.js";
+import { extractMessageText } from "../utils/llm-text.js";
 
 // ══════════════════════════════════════════════════════════════
 // State 定义
@@ -284,12 +287,18 @@ export async function* personalAgentStream(
   const agentConfig = result.agentConfig;
   if (!agentConfig) return;
 
-  // 并行获取文章列表上下文和搜索匹配上下文
-  const [articleContext, searchContext] = await Promise.all([
+  // 并行获取站点资料、文章列表和搜索匹配上下文
+  const [profile, articleContext, searchContext] = await Promise.all([
+    profileStore.ensureDefault(),
     buildArticleContext(),
     searchArticlesForContext(message),
   ]);
-  const fullSystemPrompt = agentConfig.systemPrompt + articleContext + searchContext;
+  const fullSystemPrompt = buildChatSystemPrompt(
+    agentConfig.systemPrompt,
+    profile.name,
+    articleContext,
+    searchContext
+  );
 
   const history = await chatLogStore.getSessionHistory(sessionId, 16);
   const llmMessages: (SystemMessage | HumanMessage | AIMessage)[] = [
@@ -312,6 +321,7 @@ export async function* personalAgentStream(
     openAIApiKey: config.llmApiKey,
     configuration: { baseURL: config.llmBaseUrl },
     streaming: true,
+    modelKwargs: { stream_options: { include_usage: false } },
   });
 
   let fullResponse = "";
@@ -319,14 +329,36 @@ export async function* personalAgentStream(
   try {
     const stream = await model.stream(llmMessages);
     for await (const chunk of stream) {
-      const text = typeof chunk.content === "string" ? chunk.content : "";
+      const text = extractMessageText(chunk.content);
       if (text) {
         fullResponse += text;
         yield { type: "text", content: text };
       }
     }
+
+    // SiliconFlow 等兼容 API 有时 stream 无内容但不抛错，回退 invoke
+    if (!fullResponse) {
+      const result = await model.invoke(llmMessages);
+      const text = extractMessageText(result.content);
+      if (text) {
+        fullResponse = text;
+        yield { type: "text", content: text };
+      }
+    }
   } catch (err) {
     console.error(`[PersonalAgent] Chat LLM error (model=${modelName}):`, err);
+    if (!fullResponse) {
+      try {
+        const result = await model.invoke(llmMessages);
+        const text = extractMessageText(result.content);
+        if (text) {
+          fullResponse = text;
+          yield { type: "text", content: text };
+        }
+      } catch (invokeErr) {
+        console.error(`[PersonalAgent] Chat LLM invoke fallback failed:`, invokeErr);
+      }
+    }
     if (!fullResponse) {
       const fallback = "抱歉，AI 暂时无法响应，请稍后重试。";
       fullResponse = fallback;

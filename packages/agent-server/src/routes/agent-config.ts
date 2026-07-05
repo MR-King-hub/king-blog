@@ -11,6 +11,11 @@ import { Hono } from "hono";
 import { stream as honoStream } from "hono/streaming";
 import { auth, requireAdmin } from "../middleware/auth.js";
 import { agentConfigStore } from "../store/agent-config-store.js";
+import { profileStore } from "../store/profile-store.js";
+import {
+  DEFAULT_AGENT_SYSTEM_PROMPT,
+  resolveSystemPrompt,
+} from "../data/default-agent-config.js";
 import { AppError } from "../middleware/error-handler.js";
 import type { AppEnv } from "../types.js";
 import {
@@ -32,7 +37,21 @@ agentConfigRoutes.get("/", auth, requireAdmin, async (c) => {
     throw new AppError(404, "NOT_FOUND", "Agent 配置不存在，请先运行 pnpm db:seed");
   }
 
-  return c.json({ success: true, data: config });
+  const profile = await profileStore.ensureDefault();
+  const defaultSystemPrompt = resolveSystemPrompt("", profile.name);
+
+  return c.json({
+    success: true,
+    data: {
+      ...config,
+      // 空配置时在后台展示默认模板，方便直接编辑
+      systemPrompt: config.systemPrompt.trim()
+        ? config.systemPrompt
+        : defaultSystemPrompt,
+      defaultSystemPrompt,
+      defaultSystemPromptTemplate: DEFAULT_AGENT_SYSTEM_PROMPT,
+    },
+  });
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -72,7 +91,20 @@ agentConfigRoutes.put("/", auth, requireAdmin, async (c) => {
   }
 
   const config = await agentConfigStore.update(body);
-  return c.json({ success: true, data: config });
+  const profile = await profileStore.ensureDefault();
+  const defaultSystemPrompt = resolveSystemPrompt("", profile.name);
+
+  return c.json({
+    success: true,
+    data: {
+      ...config,
+      systemPrompt: config.systemPrompt.trim()
+        ? config.systemPrompt
+        : defaultSystemPrompt,
+      defaultSystemPrompt,
+      defaultSystemPromptTemplate: DEFAULT_AGENT_SYSTEM_PROMPT,
+    },
+  });
 });
 
 // ══════════════════════════════════════════════════════════════

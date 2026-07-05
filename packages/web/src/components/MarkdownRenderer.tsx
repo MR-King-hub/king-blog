@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, isValidElement } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -59,7 +59,9 @@ function CodeBlock({
       </div>
       {/* Code content */}
       <pre className="p-5 overflow-x-auto !bg-transparent !m-0">
-        <code className={`text-[13px] font-mono leading-relaxed ${className || ""}`}>
+        <code
+          className={`hljs text-[13px] font-mono leading-relaxed text-text-primary ${className || ""}`}
+        >
           {children}
         </code>
       </pre>
@@ -139,18 +141,43 @@ function buildH2IndexMap(markdown: string): Map<string, number> {
   return map;
 }
 
+/* ─── Heading slug helpers (dedupe repeated titles) ─── */
+function slugifyHeading(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fa5]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function parseHeadings(markdown: string): TocItem[] {
+  const headingRegex = /^(#{2,3})\s+(.+)$/gm;
+  const slugCounts = new Map<string, number>();
+  const items: TocItem[] = [];
+  let match;
+
+  while ((match = headingRegex.exec(markdown)) !== null) {
+    const level = match[1].length - 1; // h2 → 1, h3 → 2
+    const title = match[2].trim();
+    const base = slugifyHeading(title);
+    const count = slugCounts.get(base) ?? 0;
+    slugCounts.set(base, count + 1);
+    const id = count === 0 ? base : `${base}-${count}`;
+    items.push({ id, title, level });
+  }
+
+  return items;
+}
+
 /* ─── Custom components map for react-markdown ─── */
-function createComponents(h2IndexMap: Map<string, number>): Components {
+function createComponents(h2IndexMap: Map<string, number>, headingIds: string[]): Components {
   let listItemIndex = 0;
+  let headingIndex = 0;
 
   return {
     // Headings with decorative gradient bar + section numbers
     h2: ({ children, ...props }) => {
       const text = String(children);
-      const id = text
-        .toLowerCase()
-        .replace(/[^\w\u4e00-\u9fa5]+/g, "-")
-        .replace(/^-|-$/g, "");
+      const id = headingIds[headingIndex++] ?? slugifyHeading(text);
       const num = h2IndexMap.get(text) ?? 0;
       // Alternate colors for section numbers
       const isEven = num % 2 === 0;
@@ -200,10 +227,7 @@ function createComponents(h2IndexMap: Map<string, number>): Components {
     },
     h3: ({ children, ...props }) => {
       const text = String(children);
-      const id = text
-        .toLowerCase()
-        .replace(/[^\w\u4e00-\u9fa5]+/g, "-")
-        .replace(/^-|-$/g, "");
+      const id = headingIds[headingIndex++] ?? slugifyHeading(text);
       return (
         <h3
           id={id}
@@ -231,25 +255,27 @@ function createComponents(h2IndexMap: Map<string, number>): Components {
         {children}
       </a>
     ),
-    // Code: inline vs block
-    code: ({ className, children, ...props }) => {
-      const isBlock = className?.includes("language-") || className?.includes("hljs");
-      if (isBlock) {
+    // Code: plain element for blocks (pre wraps CodeBlock); styled for inline
+    code: ({ className, children, ...props }) => (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    ),
+    // Pre: always render as terminal-style code block
+    pre: ({ children }) => {
+      if (isValidElement(children)) {
+        const child = children as React.ReactElement<{
+          className?: string;
+          children?: React.ReactNode;
+        }>;
         return (
-          <CodeBlock className={className}>
-            {children}
+          <CodeBlock className={child.props.className}>
+            {child.props.children}
           </CodeBlock>
         );
       }
-      // Inline code
-      return (
-        <code className="bg-bg-surface border border-border rounded-[5px] px-[0.4em] py-[0.15em] font-mono text-[0.88em] text-accent" {...props}>
-          {children}
-        </code>
-      );
+      return <CodeBlock>{children}</CodeBlock>;
     },
-    // Pre: delegate to code's CodeBlock
-    pre: ({ children }) => <>{children}</>,
     // Tables
     table: ({ children }) => <Table>{children}</Table>,
     thead: ({ children }) => <TableHead>{children}</TableHead>,
@@ -323,6 +349,24 @@ function createComponents(h2IndexMap: Map<string, number>): Components {
   };
 }
 
+/* ─── Default unlabeled fences to plain text (avoids shell # comment styling) ─── */
+function remarkDefaultCodeLanguage() {
+  function walk(node: { type?: string; lang?: string | null; children?: unknown[] }) {
+    if (node.type === "code" && !node.lang) {
+      node.lang = "text";
+    }
+    if (node.children) {
+      for (const child of node.children) {
+        walk(child as typeof node);
+      }
+    }
+  }
+
+  return (tree: { type?: string; lang?: string | null; children?: unknown[] }) => {
+    walk(tree);
+  };
+}
+
 /* ─── Extract TOC from markdown ─── */
 export interface TocItem {
   id: string;
@@ -331,19 +375,7 @@ export interface TocItem {
 }
 
 export function extractToc(markdown: string): TocItem[] {
-  const headingRegex = /^(#{2,3})\s+(.+)$/gm;
-  const items: TocItem[] = [];
-  let match;
-  while ((match = headingRegex.exec(markdown)) !== null) {
-    const level = match[1].length - 1; // h2 → 1, h3 → 2
-    const title = match[2].trim();
-    const id = title
-      .toLowerCase()
-      .replace(/[^\w\u4e00-\u9fa5]+/g, "-")
-      .replace(/^-|-$/g, "");
-    items.push({ id, title, level });
-  }
-  return items;
+  return parseHeadings(markdown);
 }
 
 /* ─── Main MarkdownRenderer component ─── */
@@ -354,13 +386,17 @@ interface MarkdownRendererProps {
 
 export default function MarkdownRenderer({ content, className = "" }: MarkdownRendererProps) {
   const h2IndexMap = useMemo(() => buildH2IndexMap(content), [content]);
-  const components = useMemo(() => createComponents(h2IndexMap), [h2IndexMap]);
+  const headingIds = useMemo(() => parseHeadings(content).map((item) => item.id), [content]);
+  const components = useMemo(
+    () => createComponents(h2IndexMap, headingIds),
+    [h2IndexMap, headingIds],
+  );
 
   return (
     <div className={`article-prose text-text-secondary text-[15px] leading-[1.85] font-body ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
+        remarkPlugins={[remarkGfm, remarkDefaultCodeLanguage]}
+        rehypePlugins={[[rehypeHighlight, { detect: false, plainText: ["text"] }]]}
         components={components}
       >
         {content}

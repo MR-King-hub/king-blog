@@ -44,6 +44,8 @@ export interface CreateArticleInput {
   tags?: string[];
   category?: string;
   status?: ArticleStatus;
+  /** URL slug，仅小写字母、数字和连字符；不传则从标题自动生成 */
+  slug?: string;
 }
 
 /** 更新文章请求 */
@@ -55,6 +57,7 @@ export interface UpdateArticleInput {
   tags?: string[];
   category?: string;
   status?: ArticleStatus;
+  slug?: string;
 }
 
 /** 文章列表查询参数 */

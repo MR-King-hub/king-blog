@@ -15,10 +15,12 @@ docker save | scp         →      docker compose up --no-build
 ```
 
 ```
-Nginx :80
+Nginx :80 / :443
   ├─ /      → web:3000   (Next.js)
   └─ /api/* → api:3001   (Hono + SQLite)
 ```
+
+HTTPS 使用 [Let's Encrypt](https://letsencrypt.org/) 免费证书，主域名为 **www.relayagent.cloud**。
 
 ## 数据库（SQLite）
 
@@ -150,6 +152,48 @@ bash deploy/deploy.sh
 | `HTTP_PORT` | 在服务器 `deploy/.env` 中设置，默认 80 |
 
 生产密钥写在服务器 **`/opt/relayagent/deploy/.env`**，不要提交到 git。
+
+## HTTPS（消除浏览器「不安全」）
+
+站点 [relayagent.cloud](http://www.relayagent.cloud/) 默认只有 HTTP，浏览器会显示「不安全」。需申请 SSL 证书。
+
+### 前置条件
+
+1. 域名 DNS 已解析到服务器 IP：
+   - `relayagent.cloud` → A 记录
+   - `www.relayagent.cloud` → A 记录（或 CNAME 到裸域）
+2. 服务器 **80 / 443** 端口已放行（安全组 / 防火墙）
+3. `deploy/.env` 中已设置 `SSL_EMAIL=你的邮箱`
+
+### 首次启用（在服务器上执行）
+
+```bash
+cd /opt/relayagent/deploy
+
+# 若 .env 尚无 SSL 配置，补充：
+#   SSL_EMAIL=your@email.com
+#   CORS_ORIGINS=https://www.relayagent.cloud,https://relayagent.cloud
+
+bash scripts/setup-ssl.sh
+docker compose restart api   # 使 CORS 生效
+```
+
+完成后访问 **https://www.relayagent.cloud**，HTTP 会自动跳转 HTTPS，地址栏显示锁图标。
+
+### 证书续期
+
+Let's Encrypt 证书 90 天有效，建议 crontab 每月执行：
+
+```bash
+0 3 1 * * cd /opt/relayagent/deploy && bash scripts/renew-ssl.sh >> /var/log/certbot-renew.log 2>&1
+```
+
+### 本地先同步配置再部署
+
+```bash
+DEPLOY_SKIP_BUILD=1 bash deploy/deploy.sh   # 只上传 nginx / compose / scripts
+# 然后 SSH 到服务器运行 setup-ssl.sh
+```
 
 ## 仅本地构建镜像
 

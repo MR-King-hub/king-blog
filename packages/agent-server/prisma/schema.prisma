@@ -92,7 +92,7 @@ model AgentConfig {
   id             String   @id @default("default")  // 固定 ID，保证单例
   name           String   @default("AI 助手")       // Agent 名称（显示在聊天窗口）
   greeting       String   @default("👋 你好！我是 Shizhe 的 AI 助手，有什么可以帮你的吗？")  // 打招呼语
-  systemPrompt   String   @default("")              // 系统提示词（定义 Agent 人设和能力边界）
+  systemPrompt   String   @default("")              // 系统提示词（空则使用 default-agent-config.ts 中的默认模板）
   modelName      String   @default("glm-5")         // 使用的模型（默认与 LLM_MODEL 环境变量一致）
   temperature    Float    @default(0.7)              // 温度（创造性）
   maxTokens      Int      @default(2000)             // 最大输出 token 数

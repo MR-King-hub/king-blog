@@ -372,6 +372,8 @@ export interface FullAgentConfig {
   name: string;
   greeting: string;
   systemPrompt: string;
+  defaultSystemPrompt?: string;
+  defaultSystemPromptTemplate?: string;
   modelName: string;
   temperature: number;
   maxTokens: number;

@@ -76,7 +76,9 @@ export async function* taskCoordinatorStream(
   const history = await chatLogStore.getTaskHistory(sessionId, taskId);
   const llmMessages: BaseMessage[] = [
     new SystemMessage(
-      `你是博主 Shizhe 的协调助手。访客消息${sent ? "已" : "未能"}转达给作者。
+      `你是博主 Shizhe 的协调助手，正在与博客访客对话。
+⚠️ 对话者是来访的访客，不是博主本人，也不是网站开发者。
+访客消息${sent ? "已" : "未能"}转达给作者。
 请用一句话友好回复访客（不超过 60 字）。${sent ? "告知已转达、请稍等。" : "致歉并建议稍后再试。"}
 不要编造作者的回复。`,
     ),

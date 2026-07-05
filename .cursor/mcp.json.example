@@ -1,9 +1,9 @@
 {
   "mcpServers": {
     "relayagent": {
-      "command": "pnpm",
-      "args": ["--filter", "@relayagent/mcp", "start"],
-      "cwd": "/Users/shizhe/personal/relayagent",
+      "type": "stdio",
+      "command": "node",
+      "args": ["/path/to/relayagent/packages/mcp/dist/index.js"],
       "env": {
         "RELAYAGENT_API_URL": "http://localhost:3001",
         "RELAYAGENT_ADMIN_EMAIL": "admin@example.com",

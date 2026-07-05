@@ -116,13 +116,14 @@ pnpm dev:server
 
 ```bash
 pnpm --filter @relayagent/mcp build
-cp packages/mcp/.env.example packages/mcp/.env
-cp .cursor/mcp.json.example .cursor/mcp.json   # 按需修改路径和账号
+cp .cursor/mcp.json.example ~/.cursor/mcp.json   # 改路径和密码
 ```
+
+重启 Cursor 后，在 **Customize → MCPs → User** 启用 `relayagent`。
 
 也可以在浏览器里管理：**登录 → 导航栏「资料」→ `/admin/profile`**（改简历/Hero/关于页），与 MCP 改的是同一份数据。
 
-配置好后重启 Cursor，即可用自然语言操作，例如「列出草稿」「发布某篇文章」「更新简历时间线」。
+配置好后新开 Agent 对话，即可用自然语言操作，例如「列出草稿」「发布某篇文章」「更新简历时间线」。
 
 详见 [packages/mcp/README.md](./packages/mcp/README.md)。
 

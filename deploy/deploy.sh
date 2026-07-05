@@ -79,7 +79,7 @@ REMOTE_DIGESTS=$("${SSH_CMD[@]}" "$SERVER" "cat $REMOTE_DIR/deploy/.image-digest
 IMAGES_CHANGED=()
 for img in "${IMAGES_TO_UPLOAD[@]}"; do
   local_digest=$(image_digest "$img")
-  remote_digest=$(echo "$REMOTE_DIGESTS" | grep "^${img}=" | cut -d= -f2-)
+  remote_digest=$(echo "$REMOTE_DIGESTS" | grep "^${img}=" | cut -d= -f2- || true)
   if [ "$local_digest" = "$remote_digest" ] && [ "${DEPLOY_FORCE:-}" != "1" ]; then
     echo "  ⏭️  $img 未变更，跳过上传"
   else
@@ -104,6 +104,7 @@ if [ ${#IMAGES_CHANGED[@]} -gt 0 ]; then
     --exclude .env \
     --exclude data \
     --exclude '*.tar.gz' \
+    --exclude nginx/active.conf \
     "$DEPLOY_DIR/" "$SERVER:$REMOTE_DIR/deploy/"
   rsync -avz "${RSYNC_SSH[@]}" "$IMAGES_TAR" "$SERVER:$REMOTE_DIR/deploy/images.tar.gz"
   UPLOAD_IMAGES=1

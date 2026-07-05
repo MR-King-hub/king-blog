@@ -207,9 +207,13 @@ export function createBlogApiClientFromEnv(): BlogApiClient {
     process.env.BLOG_API_URL ||
     "http://localhost:3001";
   const email =
-    process.env.RELAYAGENT_ADMIN_EMAIL || process.env.BLOG_ADMIN_EMAIL;
+    process.env.RELAYAGENT_ADMIN_EMAIL ||
+    process.env.BLOG_ADMIN_EMAIL ||
+    process.env.ADMIN_EMAIL;
   const password =
-    process.env.RELAYAGENT_ADMIN_PASSWORD || process.env.BLOG_ADMIN_PASSWORD;
+    process.env.RELAYAGENT_ADMIN_PASSWORD ||
+    process.env.BLOG_ADMIN_PASSWORD ||
+    process.env.ADMIN_PASSWORD;
 
   if (!email || !password) {
     throw new Error(

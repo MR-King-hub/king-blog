@@ -13,6 +13,7 @@ import {
   X,
   Save,
   Loader2,
+  ArrowUpRight,
 } from "lucide-react";
 import { projectApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -28,6 +29,10 @@ const gradients = [
 
 function getGradient(i: number) {
   return gradients[i % gradients.length];
+}
+
+function getPrimaryUrl(project: Project): string | undefined {
+  return project.github || project.demo;
 }
 
 /* ─── Project form modal ─── */
@@ -306,20 +311,29 @@ export default function ProjectsShowcase() {
                 className="mb-8 relative"
               >
                 {isAdmin && (
-                  <div className="absolute top-4 right-4 z-10 flex gap-1.5">
+                  <div className="absolute top-4 right-4 z-10 flex gap-1.5 pointer-events-auto">
                     <button onClick={() => { setEditProject(featuredProject); setShowForm(true); }} className="p-1.5 rounded-lg bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 transition-all"><PenLine size={12} /></button>
                     <button onClick={() => handleDelete(featuredProject.id, featuredProject.title)} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all"><Trash2 size={12} /></button>
                   </div>
                 )}
-                <div className="card-hover group relative rounded-3xl border border-border-accent bg-bg-elevated/40 backdrop-blur-sm overflow-hidden">
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: getGradient(0).gradient }} />
-                  <div className="relative z-10 grid grid-cols-12 gap-0">
+                <div className={`relative rounded-3xl border border-border-accent bg-bg-elevated/40 backdrop-blur-sm overflow-hidden ${getPrimaryUrl(featuredProject) ? "card-hover cursor-pointer" : ""} group`}>
+                  {getPrimaryUrl(featuredProject) && (
+                    <a
+                      href={getPrimaryUrl(featuredProject)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute inset-0 z-[1]"
+                      aria-label={`打开 ${featuredProject.title}`}
+                    />
+                  )}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: getGradient(0).gradient }} />
+                  <div className="relative z-[2] grid grid-cols-12 gap-0 pointer-events-none">
                     <div className="col-span-12 md:col-span-4 p-8 flex flex-col justify-center border-b md:border-b-0 md:border-r border-border" style={{ background: getGradient(0).gradient }}>
                       <span className="px-2 py-0.5 rounded-md bg-accent/10 text-accent text-[10px] font-mono font-bold tracking-wider uppercase w-fit mb-4">Featured</span>
-                      <h3 className="font-heading font-extrabold text-2xl lg:text-3xl text-text-primary mb-3">{featuredProject.title}</h3>
-                      <div className="flex items-center gap-3 mt-2">
-                        {featuredProject.github && <a href={featuredProject.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-accent transition-colors font-heading"><Github size={14} />Source</a>}
-                        {featuredProject.demo && <a href={featuredProject.demo} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-accent transition-colors font-heading"><ExternalLink size={14} />Demo</a>}
+                      <h3 className="font-heading font-extrabold text-2xl lg:text-3xl text-text-primary mb-3 group-hover:text-accent transition-colors duration-300">{featuredProject.title}</h3>
+                      <div className="flex items-center gap-3 mt-2 pointer-events-auto">
+                        {featuredProject.github && <a href={featuredProject.github} target="_blank" rel="noopener noreferrer" className="relative z-[3] flex items-center gap-1.5 text-xs text-text-secondary hover:text-accent transition-colors font-heading"><Github size={14} />Source</a>}
+                        {featuredProject.demo && <a href={featuredProject.demo} target="_blank" rel="noopener noreferrer" className="relative z-[3] flex items-center gap-1.5 text-xs text-text-secondary hover:text-accent transition-colors font-heading"><ExternalLink size={14} />Demo</a>}
                       </div>
                     </div>
                     <div className="col-span-12 md:col-span-8 p-8">
@@ -332,6 +346,14 @@ export default function ProjectsShowcase() {
                       <div className="flex items-center gap-4">
                         {!!featuredProject.stars && <span className="flex items-center gap-1.5 text-xs font-mono text-text-tertiary"><Star size={12} className="text-accent" />{featuredProject.stars}</span>}
                         {!!featuredProject.forks && <span className="flex items-center gap-1.5 text-xs font-mono text-text-tertiary"><GitFork size={12} className="text-[#6B9B97]" />{featuredProject.forks}</span>}
+                        {getPrimaryUrl(featuredProject) && (
+                          <div className="flex-1" />
+                        )}
+                        {getPrimaryUrl(featuredProject) && (
+                          <span className="flex items-center gap-1 text-xs text-accent font-heading font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                            查看项目 <ArrowUpRight size={12} />
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -343,25 +365,35 @@ export default function ProjectsShowcase() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {otherProjects.map((project, i) => {
                 const g = getGradient(i + 1);
+                const primaryUrl = getPrimaryUrl(project);
                 return (
                   <motion.div
                     key={project.id}
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 + i * 0.1, duration: 0.5 }}
-                    className="card-hover group relative rounded-2xl border border-border bg-bg-elevated/40 backdrop-blur-sm p-6 overflow-hidden"
+                    className={`group relative rounded-2xl border border-border bg-bg-elevated/40 backdrop-blur-sm p-6 overflow-hidden ${primaryUrl ? "card-hover cursor-pointer" : ""}`}
                   >
-                    <div className="absolute top-0 left-0 right-0 h-px opacity-40" style={{ background: g.gradient }} />
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: g.gradient }} />
+                    {primaryUrl && (
+                      <a
+                        href={primaryUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute inset-0 z-[1]"
+                        aria-label={`打开 ${project.title}`}
+                      />
+                    )}
+                    <div className="absolute top-0 left-0 right-0 h-px opacity-40 pointer-events-none" style={{ background: g.gradient }} />
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: g.gradient }} />
 
                     {isAdmin && (
-                      <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto">
                         <button onClick={() => { setEditProject(project); setShowForm(true); }} className="p-1 rounded-md bg-accent/10 text-accent hover:bg-accent/20 transition-all"><PenLine size={10} /></button>
                         <button onClick={() => handleDelete(project.id, project.title)} className="p-1 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"><Trash2 size={10} /></button>
                       </div>
                     )}
 
-                    <div className="relative z-10">
+                    <div className="relative z-[2] pointer-events-none">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${g.color}15` }}>
                           <Github size={18} style={{ color: g.color }} />
@@ -378,9 +410,17 @@ export default function ProjectsShowcase() {
                           <span key={tech} className="px-2 py-0.5 rounded text-[10px] font-heading bg-bg-surface text-text-tertiary">{tech}</span>
                         ))}
                       </div>
-                      <div className="flex items-center gap-3 pt-3 border-t border-border">
-                        {project.github && <a href={project.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-accent transition-colors font-heading"><Github size={13} />代码</a>}
-                        {project.demo && <a href={project.demo} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-accent transition-colors font-heading"><ExternalLink size={13} />预览</a>}
+                      <div className="flex items-center gap-3 pt-3 border-t border-border pointer-events-auto">
+                        {project.github && <a href={project.github} target="_blank" rel="noopener noreferrer" className="relative z-[3] flex items-center gap-1.5 text-xs text-text-tertiary hover:text-accent transition-colors font-heading"><Github size={13} />代码</a>}
+                        {project.demo && <a href={project.demo} target="_blank" rel="noopener noreferrer" className="relative z-[3] flex items-center gap-1.5 text-xs text-text-tertiary hover:text-accent transition-colors font-heading"><ExternalLink size={13} />预览</a>}
+                        {primaryUrl && (
+                          <>
+                            <div className="flex-1" />
+                            <span className="flex items-center gap-1 text-xs text-accent font-heading font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                              查看 <ArrowUpRight size={11} />
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </motion.div>

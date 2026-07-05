@@ -361,6 +361,7 @@ function ChatThread({ config, sessionId, setSessionId }: {
       // 首次发消息时初始化 sessionId
       if (!sessionId) {
         const newSid = nanoid();
+        sessionIdRef.current = newSid;
         setSessionId(newSid);
         localStorage.setItem("chat_session_id", newSid);
       }

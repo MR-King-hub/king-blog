@@ -6,6 +6,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma.js";
 import { getDefaultProfileSeedData } from "../src/data/default-profile.js";
+import { getDefaultAgentSeedData } from "../src/data/default-agent-config.js";
 
 // ── Admin 用户 ──
 const email = process.env.ADMIN_EMAIL;
@@ -27,10 +28,17 @@ if (!userExists) {
 }
 
 // ── Agent 配置（单例） ──
+const profileSeed = getDefaultProfileSeedData();
 const cfgExists = await prisma.agentConfig.findUnique({ where: { id: "default" } });
 if (!cfgExists) {
-  await prisma.agentConfig.create({ data: { id: "default" } });
+  await prisma.agentConfig.create({ data: getDefaultAgentSeedData(profileSeed.name) });
   console.log("✅ AgentConfig 默认配置");
+} else if (!cfgExists.systemPrompt.trim()) {
+  await prisma.agentConfig.update({
+    where: { id: "default" },
+    data: getDefaultAgentSeedData(profileSeed.name),
+  });
+  console.log("✅ AgentConfig 补全默认 systemPrompt");
 } else {
   console.log("⏭️  AgentConfig 已存在");
 }

@@ -18,6 +18,8 @@ import {
 } from "./client.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+// 本地 .env 优先；未配置时回退 agent-server 的 ADMIN_*（便于 pnpm dev 一键启动）
+loadEnv({ path: resolve(__dirname, "../../agent-server/.env") });
 loadEnv({ path: resolve(__dirname, "../.env") });
 
 function textResult(data: unknown) {
