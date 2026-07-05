@@ -1,0 +1,44 @@
+# syntax=docker/dockerfile:1
+# 运行时镜像：agent-server 在本地 pnpm build，此处只打包 dist + prisma
+# 依赖层与代码层分离，改代码时不重装 better-sqlite3
+
+FROM node:20-bookworm-slim
+WORKDIR /app/packages/agent-server
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && corepack enable && corepack prepare pnpm@10.29.2 --activate
+
+ENV NODE_ENV=production
+ENV PORT=3001
+ENV DATABASE_URL=file:./data/blog.db
+
+COPY packages/agent-server/package.json ./package.json
+COPY deploy/docker/agent-entrypoint.sh /entrypoint.sh
+
+# 依赖层：package.json 不变则缓存命中，跳过 pnpm install + 编译
+RUN node -e " \
+  const pkg = JSON.parse(require('fs').readFileSync('package.json','utf8')); \
+  delete pkg.dependencies['@blog/shared']; \
+  delete pkg.dependencies['@approval-channel/core']; \
+  pkg.pnpm = pkg.pnpm || {}; \
+  pkg.pnpm.onlyBuiltDependencies = ['@prisma/engines', 'better-sqlite3', 'prisma']; \
+  require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2)); \
+  " \
+  && pnpm install --prod --no-lockfile \
+  && pnpm rebuild better-sqlite3 \
+  && pnpm add -D prisma tsx --no-lockfile \
+  && mkdir -p data \
+  && chmod +x /entrypoint.sh
+
+COPY packages/agent-server/dist ./dist
+COPY packages/agent-server/prisma ./prisma
+COPY packages/agent-server/prisma.config.ts ./prisma.config.ts
+COPY packages/agent-server/generated ./generated
+COPY packages/agent-server/src/data ./src/data
+COPY packages/agent-server/src/lib ./src/lib
+
+EXPOSE 3001
+VOLUME ["/app/packages/agent-server/data"]
+ENTRYPOINT ["/entrypoint.sh"]

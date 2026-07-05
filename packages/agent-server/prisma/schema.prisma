@@ -21,13 +21,16 @@
 // ═══════════════════════════════════════════════════════════════
 
 // 数据源配置 — 使用 SQLite（一个文件就是一个数据库，最简单）
+// 注意：Prisma 7 中，连接 URL 在 prisma.config.ts 中配置，这里只声明 provider
 datasource db {
   provider = "sqlite"
 }
 
 // 客户端生成器 — 自动生成 TypeScript 类型
+// Prisma 7 使用新的 "prisma-client" 生成器（替代旧的 "prisma-client-js"）
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../generated/prisma"  // 输出到项目下的 generated 目录
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -40,6 +43,7 @@ model User {
   email        String   @unique               // 邮箱，唯一（不允许重复注册）
   passwordHash String                         // 哈希后的密码
   nickname     String                         // 昵称
+  role         String   @default("user")      // 角色：admin | user
   createdAt    DateTime @default(now())       // 创建时间，自动填充
 
   // 关系：一个用户可以有多篇文章
@@ -81,4 +85,112 @@ model Tag {
   articles Article[]
 
   @@map("tags")
+}
+
+/// Agent 配置表（单例，只有一条记录）
+model AgentConfig {
+  id             String   @id @default("default")  // 固定 ID，保证单例
+  name           String   @default("AI 助手")       // Agent 名称（显示在聊天窗口）
+  greeting       String   @default("👋 你好！我是 Shizhe 的 AI 助手，有什么可以帮你的吗？")  // 打招呼语
+  systemPrompt   String   @default("")              // 系统提示词（定义 Agent 人设和能力边界）
+  modelName      String   @default("glm-5")         // 使用的模型（默认与 LLM_MODEL 环境变量一致）
+  temperature    Float    @default(0.7)              // 温度（创造性）
+  maxTokens      Int      @default(2000)             // 最大输出 token 数
+  enabled        Boolean  @default(true)             // 是否启用（关闭后访客看不到聊天入口）
+  rateLimit      Int      @default(20)               // 每 IP 每天最大对话次数
+
+  // ── 企微通知配置 ──────────────────────────────
+  wecomBotId       String  @default("")              // 企微智能机器人 Bot ID
+  wecomBotSecret   String  @default("")              // 企微智能机器人长连接 Secret
+  wecomOwnerUserId String  @default("")              // owner 的企微 userid（单聊推送）
+  wecomGroupChatId String  @default("")              // 群聊 chatid（群聊推送，优先于单聊）
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("agent_config")
+}
+
+/// Agent 对话日志表（记录访客对话，方便管理员查看）
+model ChatLog {
+  id         String   @id @default(uuid())
+  sessionId  String                         // 会话 ID
+  role       String                         // user | assistant | system
+  content    String                         // 消息内容
+  ip         String   @default("")          // 访客 IP（用于频率限制）
+  taskId     String?                        // 关联的任务 ID（null = 主对话消息）
+  createdAt  DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([ip, createdAt])
+  @@map("chat_logs")
+}
+
+/// 待办任务表（Sub Agent 独立管理的审批/协调任务）
+model PendingTask {
+  id              String    @id @default(uuid())
+  sessionId       String                        // 所属会话
+  type            String                        // 任务类型：interview_schedule | referral_request | contact_request | ...
+  visitorRequest  String                        // 访客的原始请求
+  proposal        String    @default("")        // AI 的提案（JSON 字符串）
+  status          String    @default("waiting_owner") // waiting_owner | resolved | expired
+  imMessageId     String?                       // 推给 IM 后得到的消息 ID（用于路由回复）
+  ownerReply      String?                       // 作者在 IM 最终确认的回复
+  finalReply      String?                       // 给访客的最终回复
+  deliveredVia    String?                       // chat | email | both
+  visitorEmail    String?                       // 访客留的邮箱（可选）
+  // Sub Agent 独立对话历史（JSON 数组，存 owner 与 agent 的多轮交互）
+  conversationHistory String @default("[]")
+  // 访客追加消息（JSON 数组，访客在等待期间发的后续消息）
+  visitorMessages     String @default("[]")
+  // Sub Agent 要问访客的问题（ask_visitor 时写入，访客回答后清空）
+  pendingVisitorQuestion String @default("")
+  createdAt       DateTime  @default(now())
+  resolvedAt      DateTime?
+
+  @@index([sessionId])
+  @@index([imMessageId])
+  @@index([status])
+  @@map("pending_tasks")
+}
+
+/// 站点个人资料（单例，简历/关于页/首页 Hero）
+model SiteProfile {
+  id              String   @id @default("default")
+  name            String   @default("Shizhe")
+  tagline         String   @default("Full-stack · AI Explorer")
+  headline        String   @default("Hi, 我是")
+  heroSubtitle    String   @default("")
+  location        String   @default("中国")
+  role            String   @default("全栈工程师")
+  experienceLabel String   @default("6+ 年经验")
+  bioParagraphs   String   @default("[]")
+  timeline        String   @default("[]")
+  skillCategories String   @default("[]")
+  interests       String   @default("[]")
+  socialLinks     String   @default("[]")
+  heroBento       String   @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("site_profile")
+}
+
+/// 项目作品表
+model Project {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  techStack   String   @default("[]")       // JSON 数组
+  github      String?
+  demo        String?
+  stars       Int      @default(0)
+  forks       Int      @default(0)
+  featured    Boolean  @default(false)
+  status      String   @default("draft")    // draft | published
+  sortOrder   Int      @default(0)          // 排序权重，越小越前
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("projects")
 }

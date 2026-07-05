@@ -1,0 +1,35 @@
+# syntax=docker/dockerfile:1
+
+FROM node:20-bookworm-slim AS builder
+RUN corepack enable && corepack prepare pnpm@10.29.2 --activate
+WORKDIR /app
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY packages/web ./packages/web
+COPY packages/shared ./packages/shared
+
+ENV NEXT_TELEMETRY_DISABLED=1
+# 构建阶段不访问 API；运行时由 runner 阶段注入 INTERNAL_API_URL
+
+# 只安装 web 依赖，避免拉取 agent-server 的 better-sqlite3
+RUN pnpm install --frozen-lockfile --filter @blog/web... \
+  && pnpm --filter @blog/web build
+
+FROM node:20-bookworm-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+ENV INTERNAL_API_URL=http://api:3001
+ENV NEXT_PUBLIC_API_URL=
+
+RUN addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 nextjs
+
+COPY --from=builder --chown=nextjs:nodejs /app/packages/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/packages/web/.next/static ./packages/web/.next/static
+COPY --from=builder /app/packages/web/public ./packages/web/public
+
+USER nextjs
+EXPOSE 3000
+CMD ["node", "packages/web/server.js"]

@@ -5,3 +5,5 @@
 export * from "./types/article";
 export * from "./types/agent";
 export * from "./types/common";
+export * from "./types/project";
+export * from "./types/profile";

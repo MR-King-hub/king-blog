@@ -1,6 +1,11 @@
 /**
  * 🔌 Prisma 客户端（数据库连接）
  *
+ * Prisma 7 变化：
+ *   - 必须通过 Driver Adapter 连接数据库
+ *   - SQLite 使用 @prisma/adapter-better-sqlite3
+ *   - PrismaClient 构造函数必须传入 adapter
+ *
  * 为什么要用单例？
  *   每次 new PrismaClient() 都会创建一个数据库连接池。
  *   如果每个请求都创建一个新的，连接数会暴涨，数据库扛不住。
@@ -13,17 +18,26 @@
  *   热更新时复用已有实例。
  */
 
-import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
+import { PrismaClient } from "../../generated/prisma/client.js";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+
+// 数据库文件路径，默认 ./data/blog.db
+const connectionString = process.env.DATABASE_URL || "file:./data/blog.db";
 
 // 在 globalThis 上声明类型（TypeScript 需要）
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+// 创建 SQLite adapter（Prisma 7 必须）
+function createPrismaClient() {
+  const adapter = new PrismaBetterSqlite3({ url: connectionString });
+  return new PrismaClient({ adapter });
+}
+
 // 如果全局已有实例就复用，没有就新建
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  // log: ["query"], // 取消注释可以打印每条 SQL，调试时很有用
-});
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 // 非生产环境时，把实例存到全局
 if (process.env.NODE_ENV !== "production") {

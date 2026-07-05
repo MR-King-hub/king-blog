@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+
+FROM node:20-bookworm-slim
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN corepack enable && corepack prepare pnpm@10.29.2 --activate
+
+WORKDIR /app
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY packages ./packages
+
+RUN pnpm install --frozen-lockfile \
+  && pnpm --filter @blog/agent-server exec prisma generate \
+  && pnpm --filter @blog/agent-server build
+
+WORKDIR /app/packages/agent-server
+
+ENV NODE_ENV=production
+ENV PORT=3001
+ENV DATABASE_URL=file:./data/blog.db
+
+RUN mkdir -p data
+
+COPY deploy/docker/agent-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 3001
+VOLUME ["/app/packages/agent-server/data"]
+ENTRYPOINT ["/entrypoint.sh"]

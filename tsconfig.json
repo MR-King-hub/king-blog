@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/shared" },
     { "path": "./packages/web" },
-    { "path": "./packages/agent-server" }
+    { "path": "./packages/agent-server" },
+    { "path": "./packages/blog-mcp" }
   ]
 }

@@ -1,0 +1,54 @@
+name: blog
+
+services:
+  api:
+    image: blog-api:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.agent-server.runtime
+    env_file:
+      - .env
+    environment:
+      PORT: "3001"
+      DATABASE_URL: file:./data/blog.db
+      NODE_ENV: production
+    volumes:
+      - ./data:/app/packages/agent-server/data
+    restart: unless-stopped
+    networks:
+      - blog
+
+  web:
+    image: blog-web:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.web.runtime
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      INTERNAL_API_URL: http://api:3001
+      NEXT_PUBLIC_API_URL: ""
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - blog
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+    networks:
+      - blog
+
+networks:
+  blog:
+    driver: bridge

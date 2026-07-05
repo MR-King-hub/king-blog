@@ -27,6 +27,7 @@ packages/agent-server/data/
 # IDE
 .vscode/
 .idea/
+.cursor/mcp.json
 
 # debug
 npm-debug.log*

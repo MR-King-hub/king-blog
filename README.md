@@ -2,6 +2,8 @@
 
 个人博客系统，包含前端页面和带 AI Agent 的后端服务。
 
+**定位**：单租户、自托管的个人站模板——适合 fork 后部署自己的博客，不是多用户 SaaS 平台。
+
 ## 项目结构
 
 ```
@@ -9,6 +11,7 @@ new-blog/
 ├── packages/
 │   ├── web/              ← Next.js 博客前端
 │   ├── agent-server/     ← LangGraph Agent + CRUD 后端服务
+│   ├── blog-mcp/         ← Cursor MCP（管理员改内容）
 │   └── shared/           ← 共享类型定义
 ├── pnpm-workspace.yaml
 ├── package.json          ← 根 workspace 脚本
@@ -20,8 +23,26 @@ new-blog/
 | 包 | 技术 |
 |---|---|
 | **web** | Next.js 16, React 19, Tailwind CSS 4, framer-motion |
-| **agent-server** | Hono, LangGraph, LangChain, OpenAI |
+| **agent-server** | Hono, LangGraph, LangChain, Prisma, SQLite |
+| **blog-mcp** | MCP Server（Cursor 管理文章/项目/个人资料） |
 | **shared** | TypeScript 类型定义 |
+
+## 数据库
+
+后端使用 **SQLite**（通过 Prisma ORM），默认数据库文件：
+
+| 环境 | 路径 | 说明 |
+|------|------|------|
+| 本地开发 | `packages/agent-server/dev.db` | 由 `DATABASE_URL` 指定 |
+| Docker 生产 | `deploy/data/blog.db` | 挂载到容器内 `./data/blog.db` |
+
+**为什么用 SQLite？** 零依赖、部署简单，对个人博客的读写量完全够用。
+
+**使用约束（重要）**：
+
+- 仅支持 **单实例** 部署——不要水平扩展多个 `api` 容器共享同一数据库文件，否则可能损坏数据
+- 备份 = 复制 `.db` 文件（生产环境建议先停服或使用 SQLite 备份命令，见 [deploy/README.md](./deploy/README.md)）
+- 若未来需要多实例 / 高并发 / 多租户，需迁移到 PostgreSQL 等服务器级数据库（当前 schema 未做多库适配）
 
 ## 快速开始
 
@@ -40,7 +61,16 @@ pnpm install
 
 ```bash
 cp packages/agent-server/.env.example packages/agent-server/.env
-# 编辑 .env 填入你的 OpenAI API Key
+# 编辑 .env 填入 LLM API Key、JWT_SECRET、管理员账号等
+```
+
+### 初始化数据库
+
+```bash
+cd packages/agent-server
+pnpm db:migrate    # 执行迁移，创建 SQLite 文件
+pnpm db:seed       # 写入默认管理员、站点资料等（可选）
+cd ../..
 ```
 
 ### 启动开发
@@ -79,3 +109,27 @@ pnpm dev:server
 
 ### 健康检查
 - `GET /api/health` — 服务状态
+
+## Cursor MCP（管理员改内容）
+
+在 Cursor 里通过 MCP 直接管理文章、项目和个人资料，无需手动调 API。
+
+```bash
+pnpm --filter @blog/mcp build
+cp packages/blog-mcp/.env.example packages/blog-mcp/.env
+cp .cursor/mcp.json.example .cursor/mcp.json   # 按需修改路径和账号
+```
+
+也可以在浏览器里管理：**登录 → 导航栏「资料」→ `/admin/profile`**（改简历/Hero/关于页），与 MCP 改的是同一份数据。
+
+配置好后重启 Cursor，即可用自然语言操作，例如「列出草稿」「发布某篇文章」「更新简历时间线」。
+
+详见 [packages/blog-mcp/README.md](./packages/blog-mcp/README.md)。
+
+## 部署
+
+生产环境使用 Docker Compose（`api` + `web` + `nginx`），详见 [deploy/README.md](./deploy/README.md)。
+
+```bash
+bash deploy/deploy.sh
+```

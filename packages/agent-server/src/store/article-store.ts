@@ -222,6 +222,44 @@ class ArticleStore {
       return false;
     }
   }
+
+  /**
+   * 全文搜索文章（标题 + 摘要 + 正文）
+   * 用于 AI 聊天时检索相关文章内容
+   */
+  async search(query: string, limit = 3): Promise<Array<{
+    slug: string;
+    title: string;
+    summary: string;
+    content: string;
+    category: string | null;
+    tags: string[];
+  }>> {
+    if (!query.trim()) return [];
+
+    const rows = await prisma.article.findMany({
+      where: {
+        status: "published",
+        OR: [
+          { title: { contains: query } },
+          { summary: { contains: query } },
+          { content: { contains: query } },
+        ],
+      },
+      include: { tags: true },
+      orderBy: { updatedAt: "desc" },
+      take: limit,
+    });
+
+    return rows.map((r) => ({
+      slug: r.slug,
+      title: r.title,
+      summary: r.summary,
+      content: r.content,
+      category: r.category,
+      tags: r.tags.map((t) => t.name),
+    }));
+  }
 }
 
 export const articleStore = new ArticleStore();

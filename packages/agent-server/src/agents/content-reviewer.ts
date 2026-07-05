@@ -39,10 +39,13 @@ class ContentReviewerAgent implements BaseAgent {
 
   private buildGraph() {
     const model = new ChatOpenAI({
-      modelName: "gpt-4o-mini",
+      modelName: config.llmModel,
       temperature: 0.3, // 审核要严谨，创造性调低
       streaming: true,
-      openAIApiKey: config.openaiApiKey,
+      openAIApiKey: config.llmApiKey,
+      configuration: {
+        baseURL: config.llmBaseUrl, // 支持 OpenAI 兼容 API（Venus 等）
+      },
     });
 
     // 审核专用的系统提示词

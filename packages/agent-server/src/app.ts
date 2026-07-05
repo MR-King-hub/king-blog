@@ -44,6 +44,10 @@ import { articleRoutes } from "./routes/articles.js";
 import { agentRoutes } from "./routes/agents.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
+import { chatRoutes } from "./routes/chat.js";
+import { agentConfigRoutes } from "./routes/agent-config.js";
+import { projectRoutes } from "./routes/projects.js";
+import { profileRoutes } from "./routes/profile.js";
 
 // 创建 Hono 应用实例
 export const app = new Hono<AppEnv>();
@@ -77,11 +81,18 @@ app.use("*", logger());
 /**
  * 中间件 3: CORS（Hono 内置）
  * 允许前端跨域访问后端 API
+ *
+ * 支持通过环境变量 CORS_ORIGINS 配置允许的域名（逗号分隔）
+ * 例如: CORS_ORIGINS=https://yourdomain.com,http://localhost:3000
  */
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(",").map((s) => s.trim())
+  : ["http://localhost:3000", "http://localhost:3001"];
+
 app.use(
   "*",
   cors({
-    origin: ["http://localhost:3000", "http://localhost:3001"],
+    origin: allowedOrigins,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
   })
@@ -94,7 +105,11 @@ app.use(
 app.route("/api/health", healthRoutes);    // 健康检查
 app.route("/api/auth", authRoutes);        // 认证（登录/注册）
 app.route("/api/articles", articleRoutes); // 文章 CRUD
-app.route("/api/agents", agentRoutes);     // Agent 对话
+app.route("/api/projects", projectRoutes); // 项目 CRUD
+app.route("/api/profile", profileRoutes);  // 站点个人资料
+app.route("/api/agents", agentRoutes);     // Agent 对话（管理端）
+app.route("/api/chat", chatRoutes);        // 访客聊天（无需登录）
+app.route("/api/admin/agent-config", agentConfigRoutes); // Agent 配置（管理端）
 
 // ══════════════════════════════════════════════════════════════
 // 404 处理

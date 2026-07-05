@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1
+# 运行时镜像：web 在本地 pnpm build，此处只打包 standalone 产物
+
+FROM node:20-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+ENV INTERNAL_API_URL=http://api:3001
+ENV NEXT_PUBLIC_API_URL=
+
+RUN addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 nextjs
+
+COPY --chown=nextjs:nodejs packages/web/.next/standalone ./
+COPY --chown=nextjs:nodejs packages/web/.next/static ./packages/web/.next/static
+COPY --chown=nextjs:nodejs packages/web/public ./packages/web/public
+
+WORKDIR /app/packages/web
+USER nextjs
+EXPOSE 3000
+CMD ["node", "server.js"]

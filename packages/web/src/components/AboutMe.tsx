@@ -8,100 +8,35 @@ import {
   Code2,
   Heart,
   ArrowUpRight,
-  Github,
-  Twitter,
-  Mail,
-  BookOpen,
 } from "lucide-react";
+import type { SiteProfile } from "@blog/shared";
+import { SOCIAL_ICON_MAP } from "@/lib/profile-icons";
 
-const timeline = [
-  {
-    year: "2024 — 至今",
-    role: "高级全栈工程师",
-    company: "某科技公司",
-    description: "负责公司核心产品的前端架构和 AI 功能集成，推动团队技术升级。",
-    color: "#C9A87C",
-  },
-  {
-    year: "2022 — 2024",
-    role: "前端工程师",
-    company: "某互联网公司",
-    description: "主导多个业务线的前端开发，建设组件库和前端工程化体系。",
-    color: "#6B9B97",
-  },
-  {
-    year: "2020 — 2022",
-    role: "初级开发工程师",
-    company: "某创业公司",
-    description: "全栈开发，从零到一搭建多个产品的前后端系统。",
-    color: "#B07A5B",
-  },
-  {
-    year: "2016 — 2020",
-    role: "计算机科学",
-    company: "某大学",
-    description: "本科学习期间开始接触开源社区，参与多个校园技术项目。",
-    color: "#9B7E9B",
-  },
-];
+interface AboutMeProps {
+  profile: SiteProfile;
+}
 
-const skillCategories = [
-  {
-    category: "前端",
-    color: "#6B9B97",
-    skills: [
-      { name: "React / Next.js", level: 95 },
-      { name: "TypeScript", level: 90 },
-      { name: "Vue.js", level: 80 },
-      { name: "Tailwind CSS", level: 92 },
-    ],
-  },
-  {
-    category: "后端",
-    color: "#C9A87C",
-    skills: [
-      { name: "Node.js / Express", level: 88 },
-      { name: "Python / FastAPI", level: 75 },
-      { name: "PostgreSQL", level: 80 },
-      { name: "Redis", level: 72 },
-    ],
-  },
-  {
-    category: "AI / 工具",
-    color: "#B07A5B",
-    skills: [
-      { name: "LangChain / RAG", level: 70 },
-      { name: "Prompt Engineering", level: 85 },
-      { name: "Docker / CI/CD", level: 78 },
-      { name: "Git 工作流", level: 92 },
-    ],
-  },
-];
+export default function AboutMe({ profile }: AboutMeProps) {
+  const {
+    bioParagraphs,
+    timeline,
+    skillCategories,
+    interests,
+    socialLinks,
+    location,
+    role,
+    experienceLabel,
+  } = profile;
 
-const interests = [
-  "开源社区", "AI 应用探索", "技术写作", "产品设计", "摄影", "跑步",
-];
-
-const socialLinks = [
-  { icon: Github, label: "GitHub", href: "https://github.com", desc: "开源项目与贡献" },
-  { icon: Twitter, label: "Twitter", href: "https://twitter.com", desc: "技术动态与思考" },
-  { icon: BookOpen, label: "Blog", href: "/blog", desc: "技术博客文章" },
-  { icon: Mail, label: "Email", href: "mailto:hello@example.com", desc: "hello@example.com" },
-];
-
-export default function AboutMe() {
   return (
     <section className="relative pt-28 pb-24 overflow-hidden">
-      {/* Background */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(201,168,124,0.03)_0%,transparent_70%)]" />
         <div className="absolute bottom-[20%] right-0 w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(107,155,151,0.03)_0%,transparent_70%)]" />
-        {/* Diagonal accent lines */}
         <div className="absolute top-0 right-0 w-px h-[140%] origin-top-right -rotate-[25deg] translate-x-[-300px]" style={{ background: 'linear-gradient(to bottom, transparent, rgba(201,168,124,0.06), transparent)' }} />
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Hero intro */}
         <div className="grid grid-cols-12 gap-8 mb-20">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -113,34 +48,33 @@ export default function AboutMe() {
               关于
               <span style={{ background: 'linear-gradient(135deg, #DEC4A0 0%, #C9A87C 45%, #A8896A 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>我</span>
             </h1>
-            <p className="text-text-secondary text-base sm:text-lg leading-relaxed max-w-2xl mb-6">
-              一个热爱技术、追求极致体验的全栈工程师。从前端到后端，从传统 Web 开发到 AI 应用探索，
-              我始终保持着对新技术的好奇心和学习热情。相信技术不仅能解决问题，更能创造美好的体验。
-            </p>
-            <p className="text-text-secondary text-base leading-relaxed max-w-2xl">
-              工作之余，我热衷于开源贡献和技术写作，希望通过分享自己的经验和思考，
-              帮助更多开发者成长。这个网站就是我记录技术旅程的地方。
-            </p>
+            {bioParagraphs.map((paragraph, index) => (
+              <p
+                key={index}
+                className={`text-text-secondary text-base ${index === 0 ? "sm:text-lg" : ""} leading-relaxed max-w-2xl ${index < bioParagraphs.length - 1 ? "mb-6" : ""}`}
+              >
+                {paragraph}
+              </p>
+            ))}
 
             <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-text-tertiary font-heading">
               <span className="flex items-center gap-1.5">
                 <MapPin size={14} className="text-accent/60" />
-                中国
+                {location}
               </span>
               <span className="w-1 h-1 rounded-full bg-border" />
               <span className="flex items-center gap-1.5">
                 <Briefcase size={14} className="text-[#6B9B97]/60" />
-                全栈工程师
+                {role}
               </span>
               <span className="w-1 h-1 rounded-full bg-border" />
               <span className="flex items-center gap-1.5">
                 <Code2 size={14} className="text-[#B07A5B]/60" />
-                6+ 年经验
+                {experienceLabel}
               </span>
             </div>
           </motion.div>
 
-          {/* Contact card */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -152,7 +86,7 @@ export default function AboutMe() {
                 联系方式
               </h3>
               {socialLinks.map((link) => {
-                const Icon = link.icon;
+                const Icon = SOCIAL_ICON_MAP[link.icon];
                 return (
                   <a
                     key={link.label}
@@ -176,7 +110,6 @@ export default function AboutMe() {
           </motion.div>
         </div>
 
-        {/* Timeline */}
         <div className="mb-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -194,24 +127,19 @@ export default function AboutMe() {
           <div className="space-y-6">
             {timeline.map((item, i) => (
               <motion.div
-                key={item.year}
+                key={`${item.year}-${item.role}`}
                 initial={{ opacity: 0, x: i % 2 === 0 ? -30 : 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
                 className="card-hover group relative grid grid-cols-12 gap-4 rounded-2xl border border-border bg-bg-elevated/40 backdrop-blur-sm p-6 overflow-hidden"
               >
-                {/* Accent line */}
                 <div className="absolute top-0 left-0 w-1 h-full rounded-full" style={{ background: `linear-gradient(to bottom, ${item.color}, ${item.color}33)` }} />
-
-                {/* Year */}
                 <div className="col-span-12 sm:col-span-3 flex items-start">
                   <span className="font-mono font-bold text-sm" style={{ color: item.color }}>
                     {item.year}
                   </span>
                 </div>
-
-                {/* Content */}
                 <div className="col-span-12 sm:col-span-9">
                   <h3 className="font-heading font-bold text-base text-text-primary mb-1">
                     {item.role}
@@ -226,7 +154,6 @@ export default function AboutMe() {
           </div>
         </div>
 
-        {/* Skills */}
         <div className="mb-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -283,7 +210,6 @@ export default function AboutMe() {
           </div>
         </div>
 
-        {/* Interests */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

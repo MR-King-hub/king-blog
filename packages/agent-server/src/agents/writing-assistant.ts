@@ -93,10 +93,13 @@ class WritingAssistantAgent implements BaseAgent {
   private buildGraph() {
     // 创建 LLM（大语言模型）实例
     const model = new ChatOpenAI({
-      modelName: "gpt-4o-mini",     // 使用的模型
+      modelName: config.llmModel,    // 使用的模型（从环境变量读取）
       temperature: 0.7,              // 创造性（0=严谨，1=天马行空），写作偏高
       streaming: true,               // 开启流式输出
-      openAIApiKey: config.openaiApiKey,
+      openAIApiKey: config.llmApiKey,
+      configuration: {
+        baseURL: config.llmBaseUrl,  // 支持 OpenAI 兼容 API（Venus 等）
+      },
     });
 
     // 系统提示词 — 定义 AI 的角色和行为边界

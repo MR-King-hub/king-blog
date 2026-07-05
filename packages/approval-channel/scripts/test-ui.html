@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WeCom Bot 测试</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0a0e1a; color: #e0e0e0; padding: 32px; min-height: 100vh; }
+    h1 { font-size: 20px; margin-bottom: 24px; color: #C9A87C; }
+    .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    label { display: block; font-size: 12px; color: #999; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    input, button { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #e0e0e0; font-size: 14px; margin-bottom: 10px; }
+    button { background: #C9A87C; color: #0a0e1a; border: none; font-weight: 600; cursor: pointer; }
+    button:hover { background: #DEC4A0; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .row { display: flex; gap: 10px; }
+    .row > * { flex: 1; }
+    #log { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 16px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; line-height: 1.6; }
+    .status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+    .status.on { background: #4ade80; }
+    .status.off { background: #f87171; }
+    .info { font-size: 12px; color: #888; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>WeCom Bot 测试</h1>
+
+  <div class="card">
+    <label>Bot ID</label>
+    <input id="botId" placeholder="从企微后台复制">
+    <label>Bot Secret</label>
+    <input id="botSecret" type="password" placeholder="从企微后台复制">
+    <div class="row">
+      <button id="btnConnect">连接</button>
+      <button id="btnDisconnect" disabled>断开</button>
+    </div>
+    <div class="info"><span id="dot" class="status off"></span><span id="statusText">未连接</span></div>
+    <div class="info" id="targetInfo" style="margin-top:8px;color:#C9A87C">
+      推送目标：未发现 — 连接后请在企微里给机器人发一条消息
+    </div>
+  </div>
+
+  <div class="card">
+    <label>Task ID</label>
+    <input id="taskId" value="test-001">
+    <label>消息内容</label>
+    <input id="message" value="测试推送" placeholder="发给 owner 的消息">
+    <button id="btnPush" disabled>推送</button>
+  </div>
+
+  <div class="card">
+    <label>日志</label>
+    <div id="log">等待连接...</div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let taskId = '';
+
+    function updateTarget(status) {
+      const el = $('targetInfo');
+      if (!status?.connected) {
+        el.textContent = '推送目标：未连接';
+        el.style.color = '#888';
+        $('btnPush').disabled = true;
+        return;
+      }
+      if (status.pushTarget) {
+        el.innerHTML = `推送目标：<b>${status.pushTarget}</b>` +
+          (status.ownerUserId ? `<br>owner: ${status.ownerUserId}` : '') +
+          (status.groupChatId ? `<br>group: ${status.groupChatId}` : '');
+        el.style.color = '#4ade80';
+        $('btnPush').disabled = false;
+      } else {
+        el.textContent = '推送目标：未发现 — 请在企微里给机器人发一条消息（单聊或群聊均可）';
+        el.style.color = '#C9A87C';
+        $('btnPush').disabled = true;
+      }
+    }
+
+    async function refreshStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const status = await res.json();
+        updateTarget(status);
+        if (status.connected) {
+          $('dot').className = 'status on';
+          $('statusText').textContent = '已连接';
+          $('btnConnect').disabled = true;
+          $('btnDisconnect').disabled = false;
+        }
+      } catch { /* ignore */ }
+    }
+
+    function log(text) {
+      const time = new Date().toLocaleTimeString();
+      $('log').textContent += `[${time}] ${text}\n`;
+      $('log').scrollTop = $('log').scrollHeight;
+    }
+
+    $('btnConnect').onclick = async () => {
+      const botId = $('botId').value.trim();
+      const botSecret = $('botSecret').value.trim();
+      if (!botId || !botSecret) return log('填写 Bot ID 和 Secret');
+
+      log('连接中...');
+      const res = await fetch('/api/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ botId, botSecret }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        log('已连接');
+        $('dot').className = 'status on';
+        $('statusText').textContent = '已连接';
+        $('btnConnect').disabled = true;
+        $('btnDisconnect').disabled = false;
+        updateTarget(data);
+        if (!data.pushTarget) {
+          log('请去企微给机器人发一条消息，以自动发现 owner / group');
+        }
+      } else {
+        log(`失败: ${data.error}`);
+      }
+    };
+
+    $('btnDisconnect').onclick = async () => {
+      await fetch('/api/disconnect', { method: 'POST' });
+      log('已断开');
+      $('dot').className = 'status off';
+      $('statusText').textContent = '未连接';
+      $('btnConnect').disabled = false;
+      $('btnDisconnect').disabled = true;
+      $('btnPush').disabled = true;
+      updateTarget({ connected: false });
+    };
+
+    $('btnPush').onclick = async () => {
+      const id = $('taskId').value.trim() || 'test-001';
+      const msg = $('message').value.trim();
+      if (!msg) return log('填写消息内容');
+
+      taskId = id;
+      log(`push task=${id}`);
+      const res = await fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: id, content: msg }),
+      });
+      const data = await res.json();
+      log(data.ok ? `推送成功 (${data.target})` : `失败: ${data.error}`);
+    };
+
+    // 轮询 SSE 接收企微回复
+    const es = new EventSource('/api/events');
+    es.addEventListener('discover', (e) => {
+      const status = JSON.parse(e.data);
+      updateTarget(status);
+      log(`已发现推送目标: ${status.pushTarget}`);
+      if (status.ownerUserId) log(`   owner: ${status.ownerUserId}`);
+      if (status.groupChatId) log(`   group: ${status.groupChatId}`);
+    });
+    es.addEventListener('reply', (e) => {
+      const r = JSON.parse(e.data);
+      log(`收到回复: "${r.text}" from=${r.from}`);
+      log(`   quoted: "${r.quotedText.slice(0, 60)}"`);
+      const m = (r.quotedText + ' ' + r.text).match(/\[TASK:([^\]]+)\]/);
+      if (m) log(`   [TASK: ${m[1]}]`);
+    });
+    es.onerror = () => {}; // 静默重连
+
+    log('页面就绪，先填 Bot ID / Secret 点连接（或配置 .env 自动连接）');
+    refreshStatus();
+  </script>
+</body>
+</html>

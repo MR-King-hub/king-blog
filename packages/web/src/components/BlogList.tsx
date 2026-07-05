@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import Link from "next/link";
 import {
   Calendar,
   Clock,
   ArrowUpRight,
   Tag,
   Search,
+  PenLine,
+  Loader2,
 } from "lucide-react";
+import { articleApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import type { ArticleMeta } from "@blog/shared";
 
 interface BlogPost {
   slug: string;
@@ -20,65 +26,51 @@ interface BlogPost {
   featured?: boolean;
 }
 
-const allTags = ["全部", "React", "AI", "前端", "Node.js", "TypeScript", "架构", "工具"];
+function estimateReadTime(summary: string): string {
+  const chars = summary.length * 5; // 粗估全文长度
+  const minutes = Math.max(1, Math.ceil(chars / 500));
+  return `${minutes} 分钟`;
+}
 
-const blogPosts: BlogPost[] = [
-  {
-    slug: "react-server-components",
-    title: "深入理解 React Server Components 的实现原理",
-    summary: "深入剖析 RSC 底层实现机制，包括序列化协议、流式渲染以及与客户端组件的交互方式，附完整代码示例。",
-    date: "2026-03-15",
-    readTime: "18 分钟",
-    tags: ["React", "前端", "架构"],
-    featured: true,
-  },
-  {
-    slug: "ai-coding-tools-comparison",
-    title: "2026 年 AI 编程工具全面对比：Copilot vs Cursor vs CodeBuddy",
-    summary: "详细对比了当前主流 AI 编程工具的功能、性能和适用场景，数据驱动的深度评测。",
-    date: "2026-03-14",
-    readTime: "15 分钟",
-    tags: ["AI", "工具"],
-  },
-  {
-    slug: "nodejs-microservices",
-    title: "构建高性能 Node.js 微服务架构实践",
-    summary: "从服务拆分、通信机制、数据一致性等角度，系统性地介绍 Node.js 微服务的生产实践。",
-    date: "2026-03-13",
-    readTime: "22 分钟",
-    tags: ["Node.js", "架构"],
-  },
-  {
-    slug: "typescript-5-8-features",
-    title: "TypeScript 5.8 新特性：类型系统再进化",
-    summary: "改进的类型推断、新的装饰器语法和性能优化，一次全面解析。",
-    date: "2026-03-12",
-    readTime: "12 分钟",
-    tags: ["TypeScript", "前端"],
-  },
-  {
-    slug: "tailwind-v4-guide",
-    title: "Tailwind CSS v4 深度指南",
-    summary: "全面解读 Tailwind v4 核心变更，包括新的配置方式、主题系统和性能提升。",
-    date: "2026-03-11",
-    readTime: "14 分钟",
-    tags: ["前端", "工具"],
-  },
-  {
-    slug: "ai-agent-future",
-    title: "AI Agent 的现状与未来：从 LLM 到自主智能体",
-    summary: "分析当前 AI Agent 技术的局限性和未来发展方向，探讨自主智能体的可能性。",
-    date: "2026-03-10",
-    readTime: "20 分钟",
-    tags: ["AI", "架构"],
-  },
-];
+function toBlogPost(article: ArticleMeta): BlogPost {
+  return {
+    slug: article.slug,
+    title: article.title,
+    summary: article.summary || "",
+    date: article.createdAt?.split("T")[0] || "",
+    readTime: estimateReadTime(article.summary || ""),
+    tags: article.tags || [],
+  };
+}
 
 export default function BlogList() {
   const [activeTag, setActiveTag] = useState("全部");
   const [searchQuery, setSearchQuery] = useState("");
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [allTags, setAllTags] = useState<string[]>(["全部"]);
+  const [loading, setLoading] = useState(true);
+  const { isAdmin } = useAuth();
 
-  const filteredPosts = blogPosts.filter((post) => {
+  // 从 API 加载文章
+  useEffect(() => {
+    articleApi
+      .list({ status: "published", pageSize: 50 })
+      .then((res) => {
+        const blogPosts = res.items.map(toBlogPost);
+        setPosts(blogPosts);
+        // 提取所有标签
+        const tags = new Set<string>();
+        blogPosts.forEach((p) => p.tags.forEach((t) => tags.add(t)));
+        setAllTags(["全部", ...Array.from(tags)]);
+      })
+      .catch(() => {
+        // 加载失败时回退为空列表
+        setPosts([]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filteredPosts = posts.filter((post) => {
     const matchTag = activeTag === "全部" || post.tags.includes(activeTag);
     const matchSearch =
       searchQuery === "" ||
@@ -87,8 +79,8 @@ export default function BlogList() {
     return matchTag && matchSearch;
   });
 
-  const featuredPost = filteredPosts.find((p) => p.featured);
-  const regularPosts = filteredPosts.filter((p) => !p.featured);
+  const featuredPost = filteredPosts[0]; // 第一篇作为精选
+  const regularPosts = filteredPosts.slice(1);
 
   return (
     <section className="relative pt-28 pb-24 overflow-hidden">
@@ -154,6 +146,11 @@ export default function BlogList() {
 
         {/* Posts */}
         <AnimatePresence mode="wait">
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 size={24} className="animate-spin text-accent" />
+            </div>
+          ) : (
           <motion.div
             key={activeTag + searchQuery}
             initial={{ opacity: 0, y: 16 }}
@@ -163,12 +160,22 @@ export default function BlogList() {
           >
             {/* Featured post */}
             {featuredPost && (
-              <a href={`/article/${featuredPost.slug}`} className="block mb-6">
+              <div className="relative mb-6">
+                {isAdmin && (
+                  <Link
+                    href={`/editor/${featuredPost.slug}`}
+                    className="absolute top-4 right-4 z-10 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-accent/10 text-accent text-[10px] font-heading border border-accent/20 hover:bg-accent/20 transition-all"
+                  >
+                    <PenLine size={10} />
+                    编辑
+                  </Link>
+                )}
+                <Link href={`/article/${featuredPost.slug}`} className="block">
                 <div className="card-hover group relative grid grid-cols-12 gap-0 rounded-3xl border border-border-accent bg-bg-elevated/40 backdrop-blur-sm overflow-hidden">
                   <div className="col-span-12 sm:col-span-3 lg:col-span-2 flex items-center justify-center p-8 border-b sm:border-b-0 sm:border-r border-border" style={{ background: 'linear-gradient(to bottom right, rgba(201,168,124,0.04), transparent)' }}>
                     <div className="text-center">
                       <div className="text-[10px] font-mono text-accent/60 tracking-[0.2em] uppercase mb-1">
-                        Featured
+                        Latest
                       </div>
                       <div className="font-mono font-extrabold text-3xl lg:text-4xl text-accent leading-none">
                         ★
@@ -179,7 +186,7 @@ export default function BlogList() {
                   <div className="col-span-12 sm:col-span-9 lg:col-span-10 p-6 lg:p-8">
                     <div className="flex items-center gap-2 mb-3">
                       <span className="px-2 py-0.5 rounded-md bg-accent/10 text-accent text-[10px] font-mono font-bold tracking-wider uppercase">
-                        精选
+                        最新
                       </span>
                       {featuredPost.tags.map((tag) => (
                         <span
@@ -212,7 +219,8 @@ export default function BlogList() {
                     </div>
                   </div>
                 </div>
-              </a>
+                </Link>
+              </div>
             )}
 
             {/* Regular posts grid */}
@@ -222,14 +230,27 @@ export default function BlogList() {
                   i % 3 === 0 ? "lg:col-span-7" : i % 3 === 1 ? "lg:col-span-5" : "lg:col-span-6";
 
                 return (
-                  <motion.a
+                  <motion.div
                     key={post.slug}
-                    href={`/article/${post.slug}`}
                     initial={{ opacity: 0, y: 24 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.08, duration: 0.4 }}
-                    className={`${spanClass} card-hover group relative rounded-2xl border border-border bg-bg-elevated/40 backdrop-blur-sm p-6 block`}
+                    className={`${spanClass} relative`}
                   >
+                    {isAdmin && (
+                      <Link
+                        href={`/editor/${post.slug}`}
+                        className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent/10 text-accent text-[10px] font-heading border border-accent/20 hover:bg-accent/20 transition-all opacity-0 group-hover:opacity-100"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <PenLine size={9} />
+                        编辑
+                      </Link>
+                    )}
+                    <Link
+                      href={`/article/${post.slug}`}
+                      className="card-hover group relative rounded-2xl border border-border bg-bg-elevated/40 backdrop-blur-sm p-6 block h-full"
+                    >
                     {/* Tags */}
                     <div className="flex items-center gap-1.5 mb-3">
                       {post.tags.map((tag) => (
@@ -266,7 +287,8 @@ export default function BlogList() {
                       <div className="flex-1" />
                       <ArrowUpRight size={12} className="text-text-tertiary/50 group-hover:text-accent transition-colors" />
                     </div>
-                  </motion.a>
+                    </Link>
+                  </motion.div>
                 );
               })}
             </div>
@@ -277,6 +299,7 @@ export default function BlogList() {
               </div>
             )}
           </motion.div>
+          )}
         </AnimatePresence>
       </div>
     </section>

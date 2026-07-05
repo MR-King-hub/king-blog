@@ -17,7 +17,7 @@
  */
 
 import { Hono } from "hono";
-import { auth } from "../middleware/auth.js";
+import { auth, requireAdmin } from "../middleware/auth.js";
 import { articleService } from "../services/article.service.js";
 import type { AppEnv } from "../types.js";
 import type {
@@ -55,8 +55,8 @@ articleRoutes.get("/:slug", async (c) => {
   return c.json({ success: true, data: article });
 });
 
-// ── POST / — 创建文章（需要登录）──────────────────────────────
-articleRoutes.post("/", auth, async (c) => {
+// ── POST / — 创建文章（需要管理员权限）──────────────────────────────
+articleRoutes.post("/", auth, requireAdmin, async (c) => {
   const body = await c.req.json<CreateArticleInput>();
 
   // 校验也在 Service 里做了
@@ -64,8 +64,8 @@ articleRoutes.post("/", auth, async (c) => {
   return c.json({ success: true, data: article }, 201);
 });
 
-// ── PUT /:slug — 更新文章（需要登录）────────────────────────
-articleRoutes.put("/:slug", auth, async (c) => {
+// ── PUT /:slug — 更新文章（需要管理员权限）────────────────────────
+articleRoutes.put("/:slug", auth, requireAdmin, async (c) => {
   const slug = c.req.param("slug");
   const body = await c.req.json<UpdateArticleInput>();
 
@@ -73,8 +73,8 @@ articleRoutes.put("/:slug", auth, async (c) => {
   return c.json({ success: true, data: article });
 });
 
-// ── DELETE /:slug — 删除文章（需要登录）──────────────────────
-articleRoutes.delete("/:slug", auth, async (c) => {
+// ── DELETE /:slug — 删除文章（需要管理员权限）──────────────────────
+articleRoutes.delete("/:slug", auth, requireAdmin, async (c) => {
   const slug = c.req.param("slug");
 
   await articleService.remove(slug);

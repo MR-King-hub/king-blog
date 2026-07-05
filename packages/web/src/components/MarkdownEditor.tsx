@@ -31,8 +31,12 @@ import {
   Minimize2,
   RotateCcw,
   Type,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import { articleApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 /* ─── Types ─── */
 interface ArticleMeta {
@@ -246,9 +250,16 @@ function loadDraft(): { meta: ArticleMeta; content: string; savedAt: number } | 
   return null;
 }
 
+/* ─── Props ─── */
+interface MarkdownEditorProps {
+  /** 传入 slug 时为编辑模式，从后端加载文章 */
+  slug?: string;
+}
+
 /* ─── Main editor component ─── */
-export default function MarkdownEditor() {
+export default function MarkdownEditor({ slug: editSlug }: MarkdownEditorProps) {
   const today = new Date().toISOString().split("T")[0];
+  const { isAdmin } = useAuth();
 
   const [meta, setMeta] = useState<ArticleMeta>({
     title: "",
@@ -268,19 +279,48 @@ export default function MarkdownEditor() {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishStatus, setPublishStatus] = useState<"idle" | "success" | "error">("idle");
+  const [publishError, setPublishError] = useState("");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentSlug, setCurrentSlug] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const toolbarActions = getToolbarActions();
 
-  // Load draft on mount
+  // Load existing article in edit mode
   useEffect(() => {
+    if (editSlug) {
+      articleApi.getBySlug(editSlug).then((article) => {
+        setMeta({
+          title: article.title,
+          slug: article.slug,
+          summary: article.summary || "",
+          tags: article.tags || [],
+          date: article.createdAt?.split("T")[0] || today,
+          readTime: estimateReadTime(article.content),
+          featured: false,
+        });
+        setContent(article.content);
+        setIsEditMode(true);
+        setCurrentSlug(article.slug);
+      }).catch(() => {
+        setPublishError("加载文章失败");
+        setPublishStatus("error");
+      });
+    }
+  }, [editSlug, today]);
+
+  // Load draft on mount (only in create mode)
+  useEffect(() => {
+    if (editSlug) return; // 编辑模式不加载草稿
     const draft = loadDraft();
     if (draft) {
       setMeta(draft.meta);
       setContent(draft.content);
       setLastSaved(new Date(draft.savedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }));
     }
-  }, []);
+  }, [editSlug]);
 
   // Auto-save every 30 seconds
   useEffect(() => {
@@ -397,6 +437,63 @@ featured: ${meta.featured}
     localStorage.removeItem(STORAGE_KEY);
     setLastSaved(null);
   }, [today]);
+
+  // Publish or update article
+  const handlePublish = useCallback(async (status: "draft" | "published" = "published") => {
+    if (!meta.title.trim()) {
+      setPublishError("请填写标题");
+      setPublishStatus("error");
+      setTimeout(() => setPublishStatus("idle"), 3000);
+      return;
+    }
+    if (!content.trim()) {
+      setPublishError("请填写内容");
+      setPublishStatus("error");
+      setTimeout(() => setPublishStatus("idle"), 3000);
+      return;
+    }
+
+    setPublishing(true);
+    setPublishStatus("idle");
+    setPublishError("");
+
+    try {
+      if (isEditMode && currentSlug) {
+        // 更新已有文章
+        await articleApi.update(currentSlug, {
+          title: meta.title,
+          content,
+          summary: meta.summary || undefined,
+          tags: meta.tags.length > 0 ? meta.tags : undefined,
+          status,
+        });
+      } else {
+        // 创建新文章
+        const article = await articleApi.create({
+          title: meta.title,
+          content,
+          summary: meta.summary || undefined,
+          tags: meta.tags.length > 0 ? meta.tags : undefined,
+          status,
+        });
+        // 创建后切换为编辑模式
+        setIsEditMode(true);
+        setCurrentSlug(article.slug);
+      }
+
+      setPublishStatus("success");
+      // 发布成功后清除本地草稿
+      localStorage.removeItem(STORAGE_KEY);
+      setTimeout(() => setPublishStatus("idle"), 3000);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "发布失败";
+      setPublishError(message);
+      setPublishStatus("error");
+      setTimeout(() => setPublishStatus("idle"), 5000);
+    } finally {
+      setPublishing(false);
+    }
+  }, [meta, content, isEditMode, currentSlug]);
 
   // Keyboard shortcut: Ctrl+S to save, Ctrl+P to toggle preview
   useEffect(() => {
@@ -712,7 +809,53 @@ featured: ${meta.featured}
             >
               <RotateCcw size={14} />
             </button>
+            {isAdmin && (
+              <>
+                <div className="w-px h-4 bg-border mx-1" />
+                <button
+                  onClick={() => handlePublish("draft")}
+                  disabled={publishing}
+                  title="保存为草稿"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-heading font-medium text-text-secondary hover:text-text-primary hover:bg-bg-surface transition-all disabled:opacity-50"
+                >
+                  {publishing ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                  草稿
+                </button>
+                <button
+                  onClick={() => handlePublish("published")}
+                  disabled={publishing}
+                  title={isEditMode ? "更新并发布" : "发布文章"}
+                  className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-heading font-semibold transition-all disabled:opacity-50 ${
+                    publishStatus === "success"
+                      ? "bg-teal/20 text-teal border border-teal/30"
+                      : publishStatus === "error"
+                      ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                      : "bg-accent/15 text-accent border border-accent/25 hover:bg-accent/25"
+                  }`}
+                >
+                  {publishing ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : publishStatus === "success" ? (
+                    <Check size={12} />
+                  ) : (
+                    <Upload size={12} />
+                  )}
+                  {publishStatus === "success"
+                    ? "已发布"
+                    : publishStatus === "error"
+                    ? "失败"
+                    : isEditMode
+                    ? "更新"
+                    : "发布"}
+                </button>
+              </>
+            )}
           </div>
+          {publishStatus === "error" && publishError && (
+            <div className="text-[10px] text-red-400 font-heading ml-2">
+              {publishError}
+            </div>
+          )}
         </motion.div>
 
         {/* ─── Editor + Preview ─── */}

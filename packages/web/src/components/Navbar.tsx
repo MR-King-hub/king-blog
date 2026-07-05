@@ -2,24 +2,23 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  Menu,
-  X,
-  Zap,
-  PenLine,
-} from "lucide-react";
+import { Menu, X, Zap, PenLine, LogIn, LogOut, User, Bot, UserRound } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 const navLinks = [
   { name: "首页", href: "/" },
   { name: "博客", href: "/blog" },
   { name: "项目", href: "/projects" },
+  { name: "AI 对话", href: "/chat" },
   { name: "关于", href: "/about" },
 ];
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { user, isAdmin, loading, logout } = useAuth();
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -32,23 +31,31 @@ export default function Navbar() {
       <div className="mx-4 mt-4 rounded-2xl border border-border bg-bg-primary/60 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
         <nav className="flex h-14 items-center justify-between px-5">
           {/* Left: Logo */}
-          <a href="/" className="flex items-center gap-3 group">
+          <Link href="/" className="flex items-center gap-3 group">
             <div className="relative">
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #C9A87C 0%, #A8896A 100%)' }}>
+              <div
+                className="h-8 w-8 rounded-lg flex items-center justify-center"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #C9A87C 0%, #A8896A 100%)",
+                }}
+              >
                 <Zap size={16} className="text-text-inverse" />
               </div>
               <div className="absolute -inset-1 rounded-xl bg-accent/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </div>
             <span className="font-heading font-bold text-lg text-text-primary tracking-tight">
               Shizhe
-              <span className="text-text-tertiary font-normal text-sm">.dev</span>
+              <span className="text-text-tertiary font-normal text-sm">
+                .dev
+              </span>
             </span>
-          </a>
+          </Link>
 
           {/* Center: Navigation links */}
           <div className="hidden lg:flex items-center gap-1">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.name}
                 href={link.href}
                 className={`relative px-4 py-1.5 rounded-lg text-sm font-heading font-medium transition-all duration-300 ${
@@ -65,19 +72,75 @@ export default function Navbar() {
                   />
                 ) : null}
                 <span className="relative z-10">{link.name}</span>
-              </a>
+              </Link>
             ))}
           </div>
 
-          {/* Right: Contact button + mobile toggle */}
-          <div className="flex items-center gap-2">
-            <a
-              href="/editor"
-              className="hidden md:flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-accent/10 text-accent text-sm font-heading font-semibold border border-accent/20 hover:bg-accent/20 hover:border-accent/40 transition-all duration-300"
-            >
-              <PenLine size={14} />
-              写文章
-            </a>
+          {/* Right: Actions */}
+          <div className={`flex items-center gap-2 transition-opacity duration-200 ${loading ? 'opacity-0' : 'opacity-100'}`}>
+            {isAdmin && (
+              <Link
+                href="/editor"
+                className={`hidden md:flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-heading font-semibold transition-all duration-300 ${
+                  isActive("/editor")
+                    ? "bg-accent/20 text-accent border border-accent/40 shadow-[0_0_0_1px_rgba(201,168,124,0.2)]"
+                    : "bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 hover:border-accent/40"
+                }`}
+              >
+                <PenLine size={14} />
+                写文章
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                href="/admin/profile"
+                className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-heading font-medium transition-all duration-300 ${
+                  pathname.startsWith("/admin/profile")
+                    ? "bg-accent/10 text-accent border border-accent/20"
+                    : "text-text-secondary hover:text-accent hover:bg-accent/10"
+                }`}
+              >
+                <UserRound size={14} />
+                资料
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                href="/admin/agent"
+                className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-heading font-medium transition-all duration-300 ${
+                  pathname.startsWith("/admin/agent")
+                    ? "bg-accent/10 text-accent border border-accent/20"
+                    : "text-text-secondary hover:text-accent hover:bg-accent/10"
+                }`}
+              >
+                <Bot size={14} />
+                Agent
+              </Link>
+            )}
+
+            {user ? (
+              <div className="hidden md:flex items-center gap-2">
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading text-text-secondary">
+                  <User size={12} />
+                  {user.nickname}
+                </span>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading text-text-tertiary hover:text-text-primary hover:bg-bg-surface transition-all"
+                >
+                  <LogOut size={12} />
+                  登出
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="hidden md:flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-text-secondary text-sm font-heading font-medium hover:text-text-primary hover:bg-bg-surface transition-all duration-300"
+              >
+                <LogIn size={14} />
+                登录
+              </Link>
+            )}
 
             {/* Mobile toggle */}
             <button
@@ -102,7 +165,7 @@ export default function Navbar() {
           >
             <div className="space-y-1">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={link.name}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
@@ -113,17 +176,69 @@ export default function Navbar() {
                   }`}
                 >
                   {link.name}
-                </a>
+                </Link>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-border">
-              <a
-                href="/editor"
-                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-accent/10 text-accent text-sm font-heading font-semibold border border-accent/20"
-              >
-                <PenLine size={14} />
-                写文章
-              </a>
+            <div className="mt-3 pt-3 border-t border-border space-y-2">
+              {isAdmin && (
+                <Link
+                  href="/editor"
+                  className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-heading font-semibold transition-all ${
+                    isActive("/editor")
+                      ? "bg-accent/20 text-accent border border-accent/40"
+                      : "bg-accent/10 text-accent border border-accent/20"
+                  }`}
+                >
+                  <PenLine size={14} />
+                  写文章
+                </Link>
+              )}
+              {isAdmin && (
+                <Link
+                  href="/admin/profile"
+                  className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-heading transition-all ${
+                    pathname.startsWith("/admin/profile")
+                      ? "bg-accent/10 text-accent border border-accent/20"
+                      : "text-text-secondary hover:bg-bg-surface"
+                  }`}
+                >
+                  <UserRound size={14} />
+                  个人资料
+                </Link>
+              )}
+              {isAdmin && (
+                <Link
+                  href="/admin/agent"
+                  className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-heading transition-all ${
+                    pathname.startsWith("/admin/agent")
+                      ? "bg-accent/10 text-accent border border-accent/20"
+                      : "text-text-secondary hover:bg-bg-surface"
+                  }`}
+                >
+                  <Bot size={14} />
+                  Agent 配置
+                </Link>
+              )}
+              {user ? (
+                <button
+                  onClick={() => {
+                    logout();
+                    setMobileOpen(false);
+                  }}
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-text-secondary text-sm font-heading hover:bg-bg-surface transition-all"
+                >
+                  <LogOut size={14} />
+                  登出 ({user.nickname})
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-text-secondary text-sm font-heading hover:bg-bg-surface transition-all"
+                >
+                  <LogIn size={14} />
+                  登录
+                </Link>
+              )}
             </div>
           </motion.div>
         )}

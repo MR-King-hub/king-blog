@@ -31,8 +31,14 @@ export const config = {
   /** 服务端口号，默认 3001 */
   port: parseInt(process.env.PORT || "3001", 10),
 
-  /** OpenAI API Key，用于 LangChain 调用 GPT 模型 */
-  openaiApiKey: process.env.OPENAI_API_KEY || "",
+  /** LLM API Base URL（支持 OpenAI 兼容 API，如 Venus） */
+  llmBaseUrl: process.env.LLM_BASE_URL || "https://api.openai.com/v1",
+
+  /** LLM API Key */
+  llmApiKey: process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || "",
+
+  /** 默认模型名称 */
+  llmModel: process.env.LLM_MODEL || "gpt-4o-mini",
 
   /** 数据存储目录，文章文件等都存在这里 */
   dataDir: path.resolve(process.env.DATA_DIR || "./data"),
@@ -48,3 +54,17 @@ export const config = {
    */
   jwtSecret: process.env.JWT_SECRET || "dev-secret-change-me-in-production",
 };
+
+/**
+ * 解析实际调用的模型名。
+ * 管理后台可能存简写（glm-5、kimi-k2），在 SiliconFlow 等 OpenAI 兼容 API 上无效；
+ * 此时回落到 LLM_MODEL 环境变量。
+ */
+export function resolveModelName(agentModelName?: string | null): string {
+  const name = agentModelName?.trim();
+  if (!name) return config.llmModel;
+  if (name.includes("/")) return name;
+  const isOpenAI = config.llmBaseUrl.includes("api.openai.com");
+  if (isOpenAI) return name;
+  return config.llmModel;
+}
