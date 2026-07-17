@@ -1,7 +1,7 @@
 #!/bin/bash
 # 本地构建：pnpm 编译 + Docker 打包运行时镜像
 #
-# DEPLOY_ONLY=web|api|all  只构建指定服务（默认 all）
+# DEPLOY_ONLY=web|api|mcp|all  只构建指定服务（默认 all）
 
 set -euo pipefail
 
@@ -36,6 +36,12 @@ build_api() {
   pnpm --filter @relayagent/agent-server build
 }
 
+build_mcp() {
+  echo "  → 编译 mcp..."
+  cd "$REPO_ROOT"
+  pnpm --filter @relayagent/mcp build
+}
+
 echo "🔨 第 1 步: 本地 pnpm 编译 (DEPLOY_ONLY=$DEPLOY_ONLY)..."
 cd "$REPO_ROOT"
 # 依赖已装则跳过，节省 10～30s
@@ -46,8 +52,9 @@ fi
 case "$DEPLOY_ONLY" in
   web) build_web ;;
   api) build_api ;;
-  all) build_api; build_web ;;
-  *) echo "❌ DEPLOY_ONLY 只能是 web|api|all"; exit 1 ;;
+  mcp) build_mcp ;;
+  all) build_api; build_web; build_mcp ;;
+  *) echo "❌ DEPLOY_ONLY 只能是 web|api|mcp|all"; exit 1 ;;
 esac
 
 echo ""
@@ -56,9 +63,10 @@ cd "$DEPLOY_DIR"
 case "$DEPLOY_ONLY" in
   web) DOCKER_DEFAULT_PLATFORM="$BUILD_PLATFORM" IMAGE_TAG="$IMAGE_TAG" docker compose build web ;;
   api) DOCKER_DEFAULT_PLATFORM="$BUILD_PLATFORM" IMAGE_TAG="$IMAGE_TAG" docker compose build api ;;
+  mcp) DOCKER_DEFAULT_PLATFORM="$BUILD_PLATFORM" IMAGE_TAG="$IMAGE_TAG" docker compose build mcp ;;
   all) DOCKER_DEFAULT_PLATFORM="$BUILD_PLATFORM" IMAGE_TAG="$IMAGE_TAG" docker compose build ;;
 esac
 
 echo ""
 echo "✅ 镜像已构建:"
-docker images --format "  {{.Repository}}:{{.Tag}}  {{.Size}}" | grep -E '^relayagent-(api|web):' || true
+docker images --format "  {{.Repository}}:{{.Tag}}  {{.Size}}" | grep -E '^relayagent-(api|web|mcp):' || true

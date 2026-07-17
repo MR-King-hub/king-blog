@@ -37,7 +37,7 @@ import { logger } from "hono/logger";
 import type { AppEnv } from "./types.js";
 
 // 自定义中间件
-import { requestId, errorHandler } from "./middleware/index.js";
+import { requestId, httpTelemetry, errorHandler } from "./middleware/index.js";
 
 // 路由模块
 import { articleRoutes } from "./routes/articles.js";
@@ -73,13 +73,18 @@ app.onError(errorHandler);
 app.use("*", requestId);
 
 /**
- * 中间件 2: 日志（Hono 内置）
- * 打印请求和响应信息到终端
+ * 中间件 2: HTTP OTel（metrics + traces，未开启时为轻量 no-op span）
+ */
+app.use("*", httpTelemetry);
+
+/**
+ * 中间件 3: 日志（Hono 内置）
+ * 打印请求和响应信息到终端；trace 见响应头 X-Trace-Id
  */
 app.use("*", logger());
 
 /**
- * 中间件 3: CORS（Hono 内置）
+ * 中间件 4: CORS（Hono 内置）
  * 允许前端跨域访问后端 API
  *
  * 支持通过环境变量 CORS_ORIGINS 配置允许的域名（逗号分隔）

@@ -27,9 +27,6 @@
  *   3. Edge（边）  — 节点之间的连接关系
  */
 
-import { ChatOpenAI } from "@langchain/openai";
-// ↑ LangChain 封装的 OpenAI 客户端，支持流式输出
-
 import { StateGraph, Annotation, END, START } from "@langchain/langgraph";
 // ↑ LangGraph 的核心组件
 //   StateGraph: 状态图构建器
@@ -47,7 +44,7 @@ import {
 //   AIMessage:     AI 的回复
 
 import type { BaseAgent, AgentContext, AgentEvent } from "./base.js";
-import { config } from "../config.js";
+import { createChatModel } from "../telemetry/index.js";
 import { articleStore } from "../store/article-store.js";
 
 // ══════════════════════════════════════════════════════════════
@@ -92,14 +89,10 @@ class WritingAssistantAgent implements BaseAgent {
    */
   private buildGraph() {
     // 创建 LLM（大语言模型）实例
-    const model = new ChatOpenAI({
-      modelName: config.llmModel,    // 使用的模型（从环境变量读取）
-      temperature: 0.7,              // 创造性（0=严谨，1=天马行空），写作偏高
-      streaming: true,               // 开启流式输出
-      openAIApiKey: config.llmApiKey,
-      configuration: {
-        baseURL: config.llmBaseUrl,  // 支持 OpenAI 兼容 API（Venus 等）
-      },
+    const model = createChatModel({
+      agent: "writing-assistant",
+      temperature: 0.7,
+      streaming: true,
     });
 
     // 系统提示词 — 定义 AI 的角色和行为边界

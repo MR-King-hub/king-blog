@@ -10,7 +10,6 @@
  * 内部实现可以完全不同。
  */
 
-import { ChatOpenAI } from "@langchain/openai";
 import { StateGraph, Annotation, END, START } from "@langchain/langgraph";
 import {
   SystemMessage,
@@ -18,7 +17,7 @@ import {
   AIMessage,
 } from "@langchain/core/messages";
 import type { BaseAgent, AgentContext, AgentEvent } from "./base.js";
-import { config } from "../config.js";
+import { createChatModel } from "../telemetry/index.js";
 import { articleStore } from "../store/article-store.js";
 
 // State 定义（和写作助手一样的结构）
@@ -38,14 +37,10 @@ class ContentReviewerAgent implements BaseAgent {
   name = "content-reviewer";
 
   private buildGraph() {
-    const model = new ChatOpenAI({
-      modelName: config.llmModel,
-      temperature: 0.3, // 审核要严谨，创造性调低
+    const model = createChatModel({
+      agent: "content-reviewer",
+      temperature: 0.3,
       streaming: true,
-      openAIApiKey: config.llmApiKey,
-      configuration: {
-        baseURL: config.llmBaseUrl, // 支持 OpenAI 兼容 API（Venus 等）
-      },
     });
 
     // 审核专用的系统提示词

@@ -13,6 +13,8 @@ export type AppEnv = {
   Variables: {
     /** 请求唯一标识（由 requestId 中间件设置） */
     requestId: string;
+    /** OTel trace id（由 httpTelemetry 中间件设置，未开启时可为空） */
+    traceId?: string;
     /** 当前登录用户信息（由 auth 中间件设置） */
     user: JWTPayload;
   };

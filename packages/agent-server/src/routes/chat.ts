@@ -22,6 +22,7 @@ import { personalAgentStream } from "../agents/personal-agent.js";
 import { AppError } from "../middleware/error-handler.js";
 import { prisma } from "../lib/prisma.js";
 import { subscribeTaskEvents } from "../lib/task-events.js";
+import { recordChatRequest, withSpan } from "../telemetry/index.js";
 
 export const chatRoutes = new Hono<AppEnv>();
 
@@ -308,55 +309,65 @@ chatRoutes.post("/", async (c) => {
       await stream.write(line);
     };
 
-    try {
-      await writeLine({ type: "start", messageId });
-      await writeLine({ type: "start-step" });
-      await writeLine({ type: "text-start", id: textPartId });
+    await withSpan(
+      "chat.personal",
+      {
+        "session.id": sessionId,
+        "relayagent.agent": "personal-agent",
+      },
+      async (span) => {
+        try {
+          await writeLine({ type: "start", messageId });
+          await writeLine({ type: "start-step" });
+          await writeLine({ type: "text-start", id: textPartId });
 
-      const tokenStream = personalAgentStream({
-        message: userMessage,
-        sessionId,
-        ip,
-      });
-
-      let hasContent = false;
-      for await (const token of tokenStream) {
-        hasContent = true;
-
-        if (token.type === "task_created") {
-          // 任务创建通知 — 发送 ACK 文本 + 附带 taskId 元数据
-          await writeLine({ type: "text-delta", id: textPartId, delta: token.content });
-          // 额外发送一个自定义事件，前端用于识别 task 创建
-          await writeLine({
-            type: "text-delta",
-            id: textPartId,
-            delta: "",
-            // 通过 metadata annotation 传递 taskId
+          const tokenStream = personalAgentStream({
+            message: userMessage,
+            sessionId,
+            ip,
           });
-        } else {
-          await writeLine({ type: "text-delta", id: textPartId, delta: token.content });
+
+          let hasContent = false;
+          for await (const token of tokenStream) {
+            hasContent = true;
+
+            if (token.type === "task_created") {
+              await writeLine({ type: "text-delta", id: textPartId, delta: token.content });
+              await writeLine({
+                type: "text-delta",
+                id: textPartId,
+                delta: "",
+              });
+            } else {
+              await writeLine({ type: "text-delta", id: textPartId, delta: token.content });
+            }
+          }
+
+          if (!hasContent) {
+            await writeLine({
+              type: "text-delta",
+              id: textPartId,
+              delta: "抱歉，AI 暂时无法响应，请稍后重试 🙏",
+            });
+          }
+
+          await writeLine({ type: "text-end", id: textPartId });
+          await writeLine({ type: "finish-step" });
+          await writeLine({ type: "finish" });
+          await stream.write("data:[DONE]\n\n");
+          span.setAttribute("relayagent.outcome", "success");
+          recordChatRequest({ agent: "personal-agent", outcome: "success" });
+        } catch (err) {
+          console.error("Chat stream error:", err);
+          span.setAttribute("relayagent.outcome", "error");
+          recordChatRequest({ agent: "personal-agent", outcome: "error" });
+          await writeLine({
+            type: "error",
+            errorText: err instanceof Error ? err.message : "Unknown error",
+          });
+          await stream.write("data:[DONE]\n\n");
         }
       }
-
-      if (!hasContent) {
-        await writeLine({
-          type: "text-delta",
-          id: textPartId,
-          delta: "抱歉，AI 暂时无法响应，请稍后重试 🙏",
-        });
-      }
-
-      await writeLine({ type: "text-end", id: textPartId });
-      await writeLine({ type: "finish-step" });
-      await writeLine({ type: "finish" });
-      await stream.write("data:[DONE]\n\n");
-    } catch (err) {
-      console.error("Chat stream error:", err);
-      await writeLine({
-        type: "error",
-        errorText: err instanceof Error ? err.message : "Unknown error",
-      });
-      await stream.write("data:[DONE]\n\n");
-    }
+    );
   });
 });

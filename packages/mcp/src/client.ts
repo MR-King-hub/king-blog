@@ -22,6 +22,61 @@ interface ApiError {
   error?: { code?: string; message?: string };
 }
 
+export class ReadOnlyBlogApiClient {
+  constructor(private readonly baseUrl: string) {}
+
+  private async publicGet<T>(path: string): Promise<T> {
+    const res = await fetch(`${this.baseUrl}${path}`);
+    const body = (await res.json()) as ApiSuccess<T> | ApiError;
+    if (!res.ok || !body.success) {
+      const message =
+        !body.success && body.error?.message
+          ? body.error.message
+          : `请求失败 (${res.status}) ${path}`;
+      throw new Error(message);
+    }
+    return body.data;
+  }
+
+  async listArticles(
+    params: ListArticlesParams = {},
+  ): Promise<PaginatedResponse<ArticleMeta>> {
+    const query = new URLSearchParams();
+    if (params.page) query.set("page", String(params.page));
+    if (params.pageSize) query.set("pageSize", String(params.pageSize));
+    query.set("status", params.status ?? "published");
+    if (params.tag) query.set("tag", params.tag);
+    if (params.category) query.set("category", params.category);
+    if (params.search) query.set("search", params.search);
+
+    const qs = query.toString();
+    return this.publicGet<PaginatedResponse<ArticleMeta>>(
+      `/api/articles${qs ? `?${qs}` : ""}`,
+    );
+  }
+
+  async getArticle(slug: string): Promise<Article> {
+    return this.publicGet<Article>(
+      `/api/articles/${encodeURIComponent(slug)}`,
+    );
+  }
+
+  async listProjects(status?: string): Promise<Project[]> {
+    const qs = `?status=${encodeURIComponent(status ?? "published")}`;
+    return this.publicGet<Project[]>(`/api/projects${qs}`);
+  }
+
+  async getProject(id: string): Promise<Project> {
+    return this.publicGet<Project>(
+      `/api/projects/${encodeURIComponent(id)}`,
+    );
+  }
+
+  async getProfile(): Promise<SiteProfile> {
+    return this.publicGet<SiteProfile>("/api/profile");
+  }
+}
+
 export class BlogApiClient {
   private token: string | null = null;
 
@@ -201,11 +256,28 @@ export class BlogApiClient {
   }
 }
 
-export function createBlogApiClientFromEnv(): BlogApiClient {
-  const baseUrl =
+export type BlogApiClientLike = BlogApiClient | ReadOnlyBlogApiClient;
+
+function resolveApiBaseUrl(): string {
+  return (
     process.env.RELAYAGENT_API_URL ||
     process.env.BLOG_API_URL ||
-    "http://localhost:3001";
+    "http://localhost:3001"
+  );
+}
+
+export function isReadOnlyMode(): boolean {
+  const value = process.env.RELAYAGENT_MCP_READONLY?.toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
+export function createBlogApiClientFromEnv(): BlogApiClientLike {
+  const baseUrl = resolveApiBaseUrl();
+
+  if (isReadOnlyMode()) {
+    return new ReadOnlyBlogApiClient(baseUrl);
+  }
+
   const email =
     process.env.RELAYAGENT_ADMIN_EMAIL ||
     process.env.BLOG_ADMIN_EMAIL ||

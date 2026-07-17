@@ -1,0 +1,75 @@
+{
+  "title": "RelayAgent Overview",
+  "uid": "relayagent-overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP requests",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(relayagent_http_requests_total[5m])) by (http_status_code)",
+          "legendFormat": "{{http_status_code}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP duration (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(relayagent_http_duration_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Chat requests",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(relayagent_chat_requests_total[5m])) by (agent, outcome)",
+          "legendFormat": "{{agent}} / {{outcome}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM duration (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(relayagent_llm_duration_milliseconds_bucket[5m])) by (le, agent))",
+          "legendFormat": "{{agent}} p95"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM tokens",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(relayagent_llm_tokens_total[5m])) by (direction, agent)",
+          "legendFormat": "{{agent}} {{direction}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM errors",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(relayagent_llm_errors_total[5m])) by (agent)",
+          "legendFormat": "{{agent}}"
+        }
+      ]
+    }
+  ]
+}

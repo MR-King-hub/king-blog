@@ -374,6 +374,10 @@ export interface FullAgentConfig {
   systemPrompt: string;
   defaultSystemPrompt?: string;
   defaultSystemPromptTemplate?: string;
+  /** 环境变量 LLM_MODEL 的默认值 */
+  defaultModelName?: string;
+  /** 实际调用时解析出的模型 ID */
+  effectiveModelName?: string;
   modelName: string;
   temperature: number;
   maxTokens: number;

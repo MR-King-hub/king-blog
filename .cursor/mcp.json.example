@@ -1,6 +1,9 @@
 {
   "mcpServers": {
     "relayagent": {
+      "url": "https://www.relayagent.cloud/mcp"
+    },
+    "relayagent-local": {
       "type": "stdio",
       "command": "node",
       "args": ["/path/to/relayagent/packages/mcp/dist/index.js"],

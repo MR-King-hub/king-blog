@@ -26,6 +26,7 @@ import type { AgentRequest } from "@relayagent/shared";
 import { getAgent } from "../agents/index.js";
 import { auth } from "../middleware/auth.js";
 import type { AppEnv } from "../types.js";
+import { recordChatRequest, withSpan } from "../telemetry/index.js";
 
 export const agentRoutes = new Hono<AppEnv>();
 
@@ -82,46 +83,52 @@ agentRoutes.post("/chat", auth, async (c) => {
    *   3. 提供 stream.writeSSE() 方法，每调一次就发一条 SSE 消息
    */
   return streamSSE(c, async (stream) => {
-    try {
-      // 生成或复用会话 ID（支持多轮对话）
-      const sessionId = body.sessionId || crypto.randomUUID();
+    const sessionId = body.sessionId || crypto.randomUUID();
 
-      // 先发一条 session 事件，告诉前端这次会话的 ID
-      await stream.writeSSE({
-        event: "session",
-        data: JSON.stringify({ sessionId }),
-      });
+    await withSpan(
+      "chat.agent",
+      {
+        "session.id": sessionId,
+        "relayagent.agent": body.agentType,
+      },
+      async (span) => {
+        try {
+          await stream.writeSSE({
+            event: "session",
+            data: JSON.stringify({ sessionId }),
+          });
 
-      // 调用 Agent，获取流式事件迭代器
-      const eventStream = await agent.stream(body.message, {
-        sessionId,
-        context: body.context,
-      });
+          const eventStream = await agent.stream(body.message, {
+            sessionId,
+            context: body.context,
+          });
 
-      // 遍历 Agent 产生的每一个事件，逐个推送给前端
-      // 这里用了 for-await-of，因为 Agent 的输出是异步的（边生成边返回）
-      for await (const event of eventStream) {
-        await stream.writeSSE({
-          event: event.type,  // 事件类型，比如 "token"
-          data: JSON.stringify({ ...event, sessionId }),
-        });
+          for await (const event of eventStream) {
+            await stream.writeSSE({
+              event: event.type,
+              data: JSON.stringify({ ...event, sessionId }),
+            });
+          }
+
+          await stream.writeSSE({
+            event: "done",
+            data: JSON.stringify({ sessionId }),
+          });
+          span.setAttribute("relayagent.outcome", "success");
+          recordChatRequest({ agent: body.agentType, outcome: "success" });
+        } catch (err) {
+          console.error("Agent stream error:", err);
+          span.setAttribute("relayagent.outcome", "error");
+          recordChatRequest({ agent: body.agentType, outcome: "error" });
+          await stream.writeSSE({
+            event: "error",
+            data: JSON.stringify({
+              error: err instanceof Error ? err.message : "Unknown error",
+            }),
+          });
+        }
       }
-
-      // Agent 输出完毕，发一个 done 事件
-      await stream.writeSSE({
-        event: "done",
-        data: JSON.stringify({ sessionId }),
-      });
-    } catch (err) {
-      // Agent 执行出错，发一个 error 事件
-      console.error("Agent stream error:", err);
-      await stream.writeSSE({
-        event: "error",
-        data: JSON.stringify({
-          error: err instanceof Error ? err.message : "Unknown error",
-        }),
-      });
-    }
+    );
   });
 });
 

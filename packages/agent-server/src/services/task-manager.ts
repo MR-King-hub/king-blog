@@ -9,9 +9,9 @@
  *   3. detectTaskIntent     — 用 LLM 检测是否需要创建任务
  */
 
-import { ChatOpenAI } from "@langchain/openai";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
-import { config, resolveModelName } from "../config.js";
+import { resolveModelName } from "../config.js";
+import { createChatModel } from "../telemetry/index.js";
 import { agentConfigStore } from "../store/agent-config-store.js";
 import { pendingTaskStore } from "../store/pending-task-store.js";
 import { chatLogStore } from "../store/chat-log-store.js";
@@ -72,12 +72,11 @@ export async function detectTaskIntent(
   }
 
   const agentConfig = await agentConfigStore.get();
-  const model = new ChatOpenAI({
+  const model = createChatModel({
+    agent: "task-intent",
     modelName: resolveModelName(agentConfig?.modelName),
     temperature: 0,
     maxTokens: 300,
-    openAIApiKey: config.llmApiKey,
-    configuration: { baseURL: config.llmBaseUrl },
   });
 
   const messages = [

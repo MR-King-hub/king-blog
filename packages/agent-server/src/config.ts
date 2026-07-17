@@ -37,8 +37,8 @@ export const config = {
   /** LLM API Key */
   llmApiKey: process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || "",
 
-  /** 默认模型名称 */
-  llmModel: process.env.LLM_MODEL || "gpt-4o-mini",
+  /** 默认模型名称（OpenAI 兼容 API 的 model ID） */
+  llmModel: process.env.LLM_MODEL || "deepseek-ai/DeepSeek-V4-Flash",
 
   /** 数据存储目录，文章文件等都存在这里 */
   dataDir: path.resolve(process.env.DATA_DIR || "./data"),
@@ -53,18 +53,24 @@ export const config = {
    *   - 这里的默认值仅用于本地开发
    */
   jwtSecret: process.env.JWT_SECRET || "dev-secret-change-me-in-production",
+
+  /**
+   * OpenTelemetry（默认关闭）
+   * 需 RELAYAGENT_OTEL=1，且 OTEL_METRICS_EXPORTER / OTEL_TRACES_EXPORTER 至少其一为 otlp
+   */
+  otel: {
+    enabled: process.env.RELAYAGENT_OTEL === "1",
+    serviceName: process.env.OTEL_SERVICE_NAME || "relayagent-api",
+    endpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://localhost:4318",
+  },
 };
 
 /**
  * 解析实际调用的模型名。
- * 管理后台可能存简写（glm-5、kimi-k2），在 SiliconFlow 等 OpenAI 兼容 API 上无效；
- * 此时回落到 LLM_MODEL 环境变量。
+ * 后台 modelName 留空 → 使用 LLM_MODEL 环境变量；非空则原样作为 model ID。
  */
 export function resolveModelName(agentModelName?: string | null): string {
   const name = agentModelName?.trim();
   if (!name) return config.llmModel;
-  if (name.includes("/")) return name;
-  const isOpenAI = config.llmBaseUrl.includes("api.openai.com");
-  if (isOpenAI) return name;
-  return config.llmModel;
+  return name;
 }

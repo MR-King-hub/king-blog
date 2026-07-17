@@ -16,22 +16,29 @@
  */
 
 import { StateGraph, Annotation, END, START } from "@langchain/langgraph";
-import { ChatOpenAI } from "@langchain/openai";
 import {
   SystemMessage,
   HumanMessage,
   AIMessage,
+  ToolMessage,
 } from "@langchain/core/messages";
-import { config, resolveModelName } from "../config.js";
+import { resolveModelName } from "../config.js";
+import { createChatModel } from "../telemetry/index.js";
 import { agentConfigStore } from "../store/agent-config-store.js";
 import type { AgentConfigData } from "../store/agent-config-store.js";
 import { chatLogStore } from "../store/chat-log-store.js";
-import { articleStore } from "../store/article-store.js";
 import { pendingTaskStore } from "../store/pending-task-store.js";
 import { profileStore } from "../store/profile-store.js";
 import { buildChatSystemPrompt } from "../data/default-agent-config.js";
 import { detectAndCreateTask } from "../services/task-manager.js";
 import { extractMessageText } from "../utils/llm-text.js";
+import {
+  visitorSiteTools,
+  visitorSiteToolsByName,
+} from "./site-tools.js";
+
+/** 单轮对话最多工具调用轮数，防止死循环 */
+const MAX_TOOL_ROUNDS = 6;
 
 // ══════════════════════════════════════════════════════════════
 // State 定义
@@ -77,84 +84,21 @@ export interface StreamToken {
   taskId?: string;
 }
 
-// ══════════════════════════════════════════════════════════════
-// 工具函数
-// ══════════════════════════════════════════════════════════════
-
-async function buildArticleContext(): Promise<string> {
-  const { items } = await articleStore.list({
-    status: "published",
-    page: 1,
-    pageSize: 20,
-  });
-
-  if (items.length === 0) return "";
-
-  const lines = items.map(
-    (a, i) =>
-      `${i + 1}. 「${a.title}」${a.category ? `[${a.category}]` : ""} — ${a.summary || "暂无摘要"}`
-  );
-
-  return `\n\n以下是博客中已发布的文章列表，你可以根据这些信息回答访客的问题：\n${lines.join("\n")}`;
-}
-
-/**
- * 搜索文章正文并构建上下文
- * 根据用户消息中的关键词检索文章全文
- */
-async function searchArticlesForContext(query: string): Promise<string> {
-  // 提取关键词（去掉常见的提问词）
-  const keywords = query
-    .replace(/[?？!！。，、\n]/g, " ")
-    .replace(/(你好|请问|帮我|告诉我|什么是|如何|怎么|有没有|关于|介绍|详细|讲讲|说说)/g, " ")
-    .trim();
-
-  if (!keywords) return "";
-
-  // 用每个关键词片段搜索
-  const searchTerms = keywords.split(/\s+/).filter((t) => t.length >= 2);
-  if (searchTerms.length === 0) return "";
-
-  // 搜索多个词，合并结果并去重
-  const allResults = new Map<string, { slug: string; title: string; summary: string; content: string; category: string | null; tags: string[] }>();
-
-  for (const term of searchTerms.slice(0, 3)) {
-    const results = await articleStore.search(term, 2);
-    for (const r of results) {
-      if (!allResults.has(r.slug)) {
-        allResults.set(r.slug, r);
-      }
-    }
+async function executeToolCall(name: string, args: unknown): Promise<string> {
+  const selected = visitorSiteToolsByName[name];
+  if (!selected) {
+    return JSON.stringify({ error: `未知工具: ${name}` });
   }
-
-  if (allResults.size === 0) return "";
-
-  // 构建文章上下文（截取相关段落，避免超长）
-  const articles = Array.from(allResults.values()).slice(0, 3);
-  const contextParts = articles.map((a) => {
-    // 截取包含关键词的段落（前后各200字）
-    let relevantContent = "";
-    const lowerContent = a.content.toLowerCase();
-    for (const term of searchTerms) {
-      const idx = lowerContent.indexOf(term.toLowerCase());
-      if (idx !== -1) {
-        const start = Math.max(0, idx - 200);
-        const end = Math.min(a.content.length, idx + term.length + 400);
-        relevantContent += (start > 0 ? "..." : "") + a.content.slice(start, end) + (end < a.content.length ? "..." : "") + "\n\n";
-        break; // 每篇文章只取第一段匹配
-      }
-    }
-    // 如果没找到匹配段落，取摘要和前500字
-    if (!relevantContent) {
-      relevantContent = a.content.slice(0, 500) + (a.content.length > 500 ? "..." : "");
-    }
-
-    return `### 「${a.title}」${a.category ? ` [${a.category}]` : ""}
-${a.summary ? `摘要：${a.summary}\n` : ""}相关内容：
-${relevantContent}`;
-  });
-
-  return `\n\n──── 以下是与访客问题相关的博客文章内容 ────\n\n${contextParts.join("\n---\n\n")}\n\n请基于上述文章内容回答问题。如果文章中有相关信息，请引用并说明出自哪篇文章。`;
+  try {
+    const result = await selected.invoke(
+      (args ?? {}) as Record<string, unknown>
+    );
+    return typeof result === "string" ? result : JSON.stringify(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[PersonalAgent] Tool ${name} failed:`, err);
+    return JSON.stringify({ error: message });
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -283,30 +227,23 @@ export async function* personalAgentStream(
     return;
   }
 
-  // 3. chat 路由 — 直接流式调用 LLM（不走 StateGraph 的 chatNode）
+  // 3. chat 路由 — 工具调用轮 + 最终流式回答
   const agentConfig = result.agentConfig;
   if (!agentConfig) return;
 
-  // 并行获取站点资料、文章列表和搜索匹配上下文
-  const [profile, articleContext, searchContext] = await Promise.all([
-    profileStore.ensureDefault(),
-    buildArticleContext(),
-    searchArticlesForContext(message),
-  ]);
+  const profile = await profileStore.ensureDefault();
   const fullSystemPrompt = buildChatSystemPrompt(
     agentConfig.systemPrompt,
-    profile.name,
-    articleContext,
-    searchContext
+    profile.name
   );
 
   const history = await chatLogStore.getSessionHistory(sessionId, 16);
-  const llmMessages: (SystemMessage | HumanMessage | AIMessage)[] = [
-    new SystemMessage(fullSystemPrompt),
-  ];
+  const llmMessages: (SystemMessage | HumanMessage | AIMessage | ToolMessage)[] =
+    [new SystemMessage(fullSystemPrompt)];
   for (const log of history) {
     if (log.role === "user") llmMessages.push(new HumanMessage(log.content));
-    else if (log.role === "assistant") llmMessages.push(new AIMessage(log.content));
+    else if (log.role === "assistant")
+      llmMessages.push(new AIMessage(log.content));
   }
   llmMessages.push(new HumanMessage(message));
 
@@ -314,32 +251,64 @@ export async function* personalAgentStream(
   await chatLogStore.log({ sessionId, role: "user", content: message, ip });
 
   const modelName = resolveModelName(agentConfig.modelName);
-  const model = new ChatOpenAI({
+  const model = createChatModel({
+    agent: "personal-agent",
     modelName,
     temperature: agentConfig.temperature,
     maxTokens: agentConfig.maxTokens,
-    openAIApiKey: config.llmApiKey,
-    configuration: { baseURL: config.llmBaseUrl },
     streaming: true,
     modelKwargs: { stream_options: { include_usage: false } },
   });
+  const modelWithTools = model.bindTools(visitorSiteTools);
 
   let fullResponse = "";
 
   try {
-    const stream = await model.stream(llmMessages);
-    for await (const chunk of stream) {
-      const text = extractMessageText(chunk.content);
+    // 工具轮：非流式，按需读站点资料；有最终文本后再流式输出体验更好，
+    // 这里对「无 tool_calls」的一轮直接 stream，避免整段蹦字。
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      // 先探测是否还要调工具（短 invoke）；若要调则执行后继续
+      const probe = await modelWithTools.invoke(llmMessages);
+      const toolCalls = probe.tool_calls ?? [];
+
+      if (toolCalls.length > 0) {
+        llmMessages.push(probe);
+        for (const call of toolCalls) {
+          const observation = await executeToolCall(call.name, call.args);
+          llmMessages.push(
+            new ToolMessage({
+              content: observation,
+              tool_call_id: call.id ?? call.name,
+            })
+          );
+        }
+        continue;
+      }
+
+      // 无工具调用：用 probe 的文本作为回答（再 stream 会多打一枪）
+      const text = extractMessageText(probe.content);
       if (text) {
-        fullResponse += text;
+        fullResponse = text;
         yield { type: "text", content: text };
+      }
+      break;
+    }
+
+    // 工具轮用尽仍无文本时，再 stream / invoke 兜底
+    if (!fullResponse) {
+      const stream = await modelWithTools.stream(llmMessages);
+      for await (const chunk of stream) {
+        const text = extractMessageText(chunk.content);
+        if (text) {
+          fullResponse += text;
+          yield { type: "text", content: text };
+        }
       }
     }
 
-    // SiliconFlow 等兼容 API 有时 stream 无内容但不抛错，回退 invoke
     if (!fullResponse) {
-      const result = await model.invoke(llmMessages);
-      const text = extractMessageText(result.content);
+      const fallbackMsg = await modelWithTools.invoke(llmMessages);
+      const text = extractMessageText(fallbackMsg.content);
       if (text) {
         fullResponse = text;
         yield { type: "text", content: text };
@@ -349,14 +318,17 @@ export async function* personalAgentStream(
     console.error(`[PersonalAgent] Chat LLM error (model=${modelName}):`, err);
     if (!fullResponse) {
       try {
-        const result = await model.invoke(llmMessages);
-        const text = extractMessageText(result.content);
+        const fallbackMsg = await modelWithTools.invoke(llmMessages);
+        const text = extractMessageText(fallbackMsg.content);
         if (text) {
           fullResponse = text;
           yield { type: "text", content: text };
         }
       } catch (invokeErr) {
-        console.error(`[PersonalAgent] Chat LLM invoke fallback failed:`, invokeErr);
+        console.error(
+          `[PersonalAgent] Chat LLM invoke fallback failed:`,
+          invokeErr
+        );
       }
     }
     if (!fullResponse) {
@@ -368,6 +340,11 @@ export async function* personalAgentStream(
 
   // 记录 AI 回复
   if (fullResponse) {
-    await chatLogStore.log({ sessionId, role: "assistant", content: fullResponse, ip });
+    await chatLogStore.log({
+      sessionId,
+      role: "assistant",
+      content: fullResponse,
+      ip,
+    });
   }
 }

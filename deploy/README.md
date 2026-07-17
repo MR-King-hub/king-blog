@@ -17,7 +17,8 @@ docker save | scp         →      docker compose up --no-build
 ```
 Nginx :80 / :443
   ├─ /      → web:3000   (Next.js)
-  └─ /api/* → api:3001   (Hono + SQLite)
+  ├─ /api/* → api:3001   (Hono + SQLite)
+  └─ /mcp   → mcp:3002   (只读 MCP, Streamable HTTP)
 ```
 
 HTTPS 使用 [Let's Encrypt](https://letsencrypt.org/) 免费证书，主域名为 **www.relayagent.cloud**。
@@ -208,6 +209,63 @@ cd deploy
 cp .env.example .env
 docker compose up --build
 ```
+
+## 可观测性（OpenTelemetry）
+
+`agent-server` 默认**不导出**任何 telemetry。开启需双开关：
+
+1. `RELAYAGENT_OTEL=1`
+2. `OTEL_METRICS_EXPORTER=otlp` 和/或 `OTEL_TRACES_EXPORTER=otlp`
+
+可选环境变量：
+
+| 变量 | 说明 |
+|------|------|
+| `OTEL_SERVICE_NAME` | 默认 `relayagent-api` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | 默认 `http://localhost:4318`（HTTP/protobuf） |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Collector 鉴权，`k=v,k2=v2` |
+| `OTEL_METRIC_EXPORT_INTERVAL` | 指标导出间隔（ms），默认 60000 |
+
+默认**不导出**用户 prompt / 回复正文，只记 model、agent、latency、token、HTTP status。
+
+### 指向自建 / 云 Collector（Grafana Cloud 等）
+
+在 `deploy/.env`（或本地 `packages/agent-server/.env`）中：
+
+```bash
+RELAYAGENT_OTEL=1
+OTEL_METRICS_EXPORTER=otlp
+OTEL_TRACES_EXPORTER=otlp
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-xxx.grafana.net/otlp
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic <base64-token>
+```
+
+重启 `api` 即可。
+
+### 本地一键看图（可选 compose profile）
+
+默认 `docker compose up` **不会**启动观测栈。需要时：
+
+```bash
+cd deploy
+
+# 在 .env 中打开导出，并指向 compose 内 collector：
+# RELAYAGENT_OTEL=1
+# OTEL_METRICS_EXPORTER=otlp
+# OTEL_TRACES_EXPORTER=otlp
+# OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+
+docker compose --profile observability up -d
+```
+
+| 服务 | 地址 |
+|------|------|
+| Grafana | http://localhost:3003 （匿名 Viewer；admin/admin） |
+| Prometheus | http://localhost:9090 |
+| Tempo | http://localhost:3200 |
+| OTLP HTTP | http://localhost:4318 |
+
+Grafana 预置了 **RelayAgent Overview** dashboard（HTTP / chat / LLM 延迟与 token）。
 
 ## 服务器运维
 

@@ -24,9 +24,9 @@
  */
 
 import { StateGraph, Annotation, END, START } from "@langchain/langgraph";
-import { ChatOpenAI } from "@langchain/openai";
 import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
-import { config, resolveModelName } from "../config.js";
+import { resolveModelName } from "../config.js";
+import { createChatModel } from "../telemetry/index.js";
 import { agentConfigStore } from "../store/agent-config-store.js";
 
 // ══════════════════════════════════════════════════════════════
@@ -95,12 +95,11 @@ export interface HandleReplyResult {
 
 async function createModel(temperature = 0.3, maxTokens = 800) {
   const agentConfig = await agentConfigStore.get();
-  return new ChatOpenAI({
+  return createChatModel({
+    agent: "task-agent",
     modelName: resolveModelName(agentConfig?.modelName),
     temperature,
     maxTokens,
-    openAIApiKey: config.llmApiKey,
-    configuration: { baseURL: config.llmBaseUrl },
   });
 }
 

@@ -36,6 +36,23 @@ services:
     networks:
       - relayagent
 
+  mcp:
+    image: relayagent-mcp:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.mcp.runtime
+    environment:
+      NODE_ENV: production
+      MCP_PORT: "3002"
+      RELAYAGENT_API_URL: http://api:3001
+      RELAYAGENT_MCP_READONLY: "true"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - relayagent
+
   nginx:
     image: nginx:1.27-alpine
     ports:
@@ -48,6 +65,7 @@ services:
     depends_on:
       - web
       - api
+      - mcp
     restart: unless-stopped
     networks:
       - relayagent
@@ -62,6 +80,69 @@ services:
     networks:
       - relayagent
 
+  # ── Optional observability stack (OTLP → Prometheus / Tempo → Grafana) ──
+  # docker compose --profile observability up -d
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    profiles: [observability]
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - prometheus
+      - tempo
+    restart: unless-stopped
+    networks:
+      - relayagent
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: [observability]
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - relayagent
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    profiles: [observability]
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./observability/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200"
+    restart: unless-stopped
+    networks:
+      - relayagent
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    profiles: [observability]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3003:3000"
+    depends_on:
+      - prometheus
+      - tempo
+    restart: unless-stopped
+    networks:
+      - relayagent
+
 networks:
   relayagent:
     driver: bridge
@@ -69,3 +150,6 @@ networks:
 volumes:
   certbot-etc:
   certbot-www:
+  prometheus-data:
+  tempo-data:
+  grafana-data:

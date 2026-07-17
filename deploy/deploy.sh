@@ -6,6 +6,7 @@
 #   bash deploy/deploy.sh
 #   DEPLOY_ONLY=web bash deploy/deploy.sh      # 只更前端（快很多）
 #   DEPLOY_ONLY=api bash deploy/deploy.sh      # 只更后端
+#   DEPLOY_ONLY=mcp bash deploy/deploy.sh      # 只更 MCP
 #   DEPLOY_SKIP_BUILD=1 bash deploy/deploy.sh  # 跳过构建，只上传+重启
 # ═══════════════════════════════════════════════════════════
 
@@ -22,6 +23,7 @@ IMAGES_TAR="/tmp/relayagent-images-${IMAGE_TAG}.tar.gz"
 
 API_IMAGE="relayagent-api:${IMAGE_TAG}"
 WEB_IMAGE="relayagent-web:${IMAGE_TAG}"
+MCP_IMAGE="relayagent-mcp:${IMAGE_TAG}"
 
 # shellcheck source=ssh-env.sh
 source "$DEPLOY_DIR/ssh-env.sh"
@@ -42,7 +44,7 @@ image_digest() {
 
 echo "📁 仓库: $REPO_ROOT"
 echo "🖥️  服务器: $SERVER:$REMOTE_DIR"
-echo "🏷️  镜像: $API_IMAGE, $WEB_IMAGE"
+echo "🏷️  镜像: $API_IMAGE, $WEB_IMAGE, $MCP_IMAGE"
 echo "📦 范围: $DEPLOY_ONLY"
 [ -n "${DEPLOY_SSH_KEY:-}" ] && echo "🔑 SSH 密钥: $DEPLOY_SSH_KEY"
 echo ""
@@ -59,8 +61,9 @@ IMAGES_TO_UPLOAD=()
 case "$DEPLOY_ONLY" in
   web) IMAGES_TO_UPLOAD=("$WEB_IMAGE") ;;
   api) IMAGES_TO_UPLOAD=("$API_IMAGE") ;;
-  all) IMAGES_TO_UPLOAD=("$API_IMAGE" "$WEB_IMAGE") ;;
-  *) echo "❌ DEPLOY_ONLY 只能是 web|api|all"; exit 1 ;;
+  mcp) IMAGES_TO_UPLOAD=("$MCP_IMAGE") ;;
+  all) IMAGES_TO_UPLOAD=("$API_IMAGE" "$WEB_IMAGE" "$MCP_IMAGE") ;;
+  *) echo "❌ DEPLOY_ONLY 只能是 web|api|mcp|all"; exit 1 ;;
 esac
 
 for img in "${IMAGES_TO_UPLOAD[@]}"; do
@@ -91,11 +94,13 @@ done
 echo ""
 
 # ── 3. 导出并上传 ──
-if [ ${#IMAGES_CHANGED[@]} -gt 0 ]; then
+if [ ${#IMAGES_CHANGED[@]} -gt 0 ] || [ "$DEPLOY_ONLY" = "mcp" ]; then
   echo "📦 第 3 步: 导出镜像..."
-  # shellcheck disable=SC2068
-  docker save ${IMAGES_CHANGED[@]} | gzip > "$IMAGES_TAR"
-  echo "  → 大小: $(du -sh "$IMAGES_TAR" | cut -f1)"
+  if [ ${#IMAGES_CHANGED[@]} -gt 0 ]; then
+    # shellcheck disable=SC2068
+    docker save ${IMAGES_CHANGED[@]} | gzip > "$IMAGES_TAR"
+    echo "  → 大小: $(du -sh "$IMAGES_TAR" | cut -f1)"
+  fi
 
   echo "📤 上传到服务器..."
   "${SSH_CMD[@]}" "$SERVER" "mkdir -p $REMOTE_DIR/deploy"
@@ -106,7 +111,9 @@ if [ ${#IMAGES_CHANGED[@]} -gt 0 ]; then
     --exclude '*.tar.gz' \
     --exclude nginx/active.conf \
     "$DEPLOY_DIR/" "$SERVER:$REMOTE_DIR/deploy/"
-  rsync -avz "${RSYNC_SSH[@]}" "$IMAGES_TAR" "$SERVER:$REMOTE_DIR/deploy/images.tar.gz"
+  if [ ${#IMAGES_CHANGED[@]} -gt 0 ]; then
+    rsync -avz "${RSYNC_SSH[@]}" "$IMAGES_TAR" "$SERVER:$REMOTE_DIR/deploy/images.tar.gz"
+  fi
   UPLOAD_IMAGES=1
 else
   echo "⏭️  第 3 步: 镜像均未变更，跳过上传"
@@ -119,7 +126,7 @@ echo ""
 echo "🚀 第 4 步: 服务器加载镜像并启动..."
 
 DIGEST_FILE=$(mktemp)
-for img in "$API_IMAGE" "$WEB_IMAGE"; do
+for img in "$API_IMAGE" "$WEB_IMAGE" "$MCP_IMAGE"; do
   d=$(image_digest "$img")
   [ "$d" != "missing" ] && echo "${img}=${d}" >> "$DIGEST_FILE"
 done
@@ -133,7 +140,7 @@ IMAGE_TAG="$IMAGE_TAG"
 UPLOAD_IMAGES="$UPLOAD_IMAGES"
 cd "\$REMOTE_DIR/deploy"
 
-if [ "\$UPLOAD_IMAGES" = "1" ]; then
+if [ "\$UPLOAD_IMAGES" = "1" ] && [ -f images.tar.gz ]; then
   echo "  → 加载镜像..."
   gunzip -c images.tar.gz | docker load
   rm -f images.tar.gz
@@ -142,12 +149,23 @@ fi
 echo "  → 重启服务..."
 IMAGE_TAG="\$IMAGE_TAG" docker compose up -d --no-build
 
+if ! grep -q 'location /mcp' nginx/active.conf 2>/dev/null; then
+  echo "  → 更新 nginx 配置（添加 /mcp 路由）..."
+  if grep -q 'ssl_certificate' nginx/active.conf 2>/dev/null; then
+    cp nginx/default.conf nginx/active.conf
+  else
+    cp nginx/bootstrap.conf nginx/active.conf
+  fi
+  docker compose exec nginx nginx -s reload 2>/dev/null || docker compose up -d nginx
+fi
+
 echo ""
 docker compose ps
 echo ""
 echo "✅ 部署完成"
 echo "  → 站点: http://\$DEPLOY_HOST"
 echo "  → 健康检查: http://\$DEPLOY_HOST/api/health"
+echo "  → MCP: https://www.relayagent.cloud/mcp"
 REMOTE_SCRIPT
 
 # 更新远程 digest 记录

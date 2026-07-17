@@ -5,10 +5,10 @@
  * 转发不依赖 LLM，避免限流或 tool calling 失败导致无法联系作者。
  */
 
-import { ChatOpenAI } from "@langchain/openai";
 import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
 import type { BaseMessage } from "@langchain/core/messages";
-import { config, resolveModelName } from "../config.js";
+import { resolveModelName } from "../config.js";
+import { createChatModel } from "../telemetry/index.js";
 import { agentConfigStore } from "../store/agent-config-store.js";
 import { chatLogStore } from "../store/chat-log-store.js";
 import { sendImNotification } from "../services/im-service.js";
@@ -64,13 +64,12 @@ export async function* taskCoordinatorStream(
 
   // 2. LLM 生成更自然的回复（失败则用默认文案）
   const agentConfig = await agentConfigStore.get();
-  const model = new ChatOpenAI({
+  const model = createChatModel({
+    agent: "task-coordinator",
     modelName: resolveModelName(agentConfig?.modelName),
     temperature: 0.5,
     maxTokens: 150,
     maxRetries: 1,
-    openAIApiKey: config.llmApiKey,
-    configuration: { baseURL: config.llmBaseUrl },
   });
 
   const history = await chatLogStore.getTaskHistory(sessionId, taskId);

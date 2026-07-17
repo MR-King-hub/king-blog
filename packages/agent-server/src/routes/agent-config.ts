@@ -16,6 +16,7 @@ import {
   DEFAULT_AGENT_SYSTEM_PROMPT,
   resolveSystemPrompt,
 } from "../data/default-agent-config.js";
+import { config as appConfig, resolveModelName } from "../config.js";
 import { AppError } from "../middleware/error-handler.js";
 import type { AppEnv } from "../types.js";
 import {
@@ -31,9 +32,9 @@ export const agentConfigRoutes = new Hono<AppEnv>();
 // GET /api/admin/agent-config — 获取完整 Agent 配置
 // ══════════════════════════════════════════════════════════════
 agentConfigRoutes.get("/", auth, requireAdmin, async (c) => {
-  const config = await agentConfigStore.get();
+  const agentConfig = await agentConfigStore.get();
 
-  if (!config) {
+  if (!agentConfig) {
     throw new AppError(404, "NOT_FOUND", "Agent 配置不存在，请先运行 pnpm db:seed");
   }
 
@@ -43,13 +44,15 @@ agentConfigRoutes.get("/", auth, requireAdmin, async (c) => {
   return c.json({
     success: true,
     data: {
-      ...config,
+      ...agentConfig,
       // 空配置时在后台展示默认模板，方便直接编辑
-      systemPrompt: config.systemPrompt.trim()
-        ? config.systemPrompt
+      systemPrompt: agentConfig.systemPrompt.trim()
+        ? agentConfig.systemPrompt
         : defaultSystemPrompt,
       defaultSystemPrompt,
       defaultSystemPromptTemplate: DEFAULT_AGENT_SYSTEM_PROMPT,
+      defaultModelName: appConfig.llmModel,
+      effectiveModelName: resolveModelName(agentConfig.modelName),
     },
   });
 });
@@ -90,19 +93,25 @@ agentConfigRoutes.put("/", auth, requireAdmin, async (c) => {
     }
   }
 
-  const config = await agentConfigStore.update(body);
+  if (body.modelName !== undefined) {
+    body.modelName = String(body.modelName).trim();
+  }
+
+  const updated = await agentConfigStore.update(body);
   const profile = await profileStore.ensureDefault();
   const defaultSystemPrompt = resolveSystemPrompt("", profile.name);
 
   return c.json({
     success: true,
     data: {
-      ...config,
-      systemPrompt: config.systemPrompt.trim()
-        ? config.systemPrompt
+      ...updated,
+      systemPrompt: updated.systemPrompt.trim()
+        ? updated.systemPrompt
         : defaultSystemPrompt,
       defaultSystemPrompt,
       defaultSystemPromptTemplate: DEFAULT_AGENT_SYSTEM_PROMPT,
+      defaultModelName: appConfig.llmModel,
+      effectiveModelName: resolveModelName(updated.modelName),
     },
   });
 });

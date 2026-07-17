@@ -327,36 +327,42 @@ export default function AgentConfigPage() {
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* 模型 */}
-                <div>
+                <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-text-primary mb-1.5">
-                    模型
+                    模型 ID（可选覆盖）
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={config.modelName}
                     onChange={(e) => updateField("modelName", e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-bg-primary border border-border text-text-primary text-sm focus:border-accent/40 focus:outline-none transition-colors"
-                  >
-                    {!config.modelName.includes("/") &&
-                      !["gpt-4o-mini", "gpt-4o"].includes(config.modelName) && (
-                        <option value={config.modelName}>
-                          {config.modelName}（旧简写，建议更换）
-                        </option>
-                      )}
-                    <optgroup label="硅基流动 SiliconFlow">
-                      <option value="deepseek-ai/DeepSeek-V3.2">DeepSeek V3.2（推荐）</option>
-                      <option value="deepseek-ai/DeepSeek-V3">DeepSeek V3</option>
-                      <option value="Qwen/Qwen3-235B-A22B-Instruct-2507">Qwen3 235B</option>
-                      <option value="THUDM/glm-4-9b-chat">GLM-4 9B</option>
-                      <option value="Pro/zai-org/GLM-4.7">GLM-4.7</option>
-                    </optgroup>
-                    <optgroup label="OpenAI（需 api.openai.com）">
-                      <option value="gpt-4o-mini">GPT-4o Mini</option>
-                      <option value="gpt-4o">GPT-4o</option>
-                    </optgroup>
-                  </select>
-                  <p className="mt-1 text-xs text-text-secondary">
-                    模型 ID 需与 LLM_BASE_URL 提供商一致；未配置时用 .env 中的 LLM_MODEL。
-                  </p>
+                    placeholder={config.defaultModelName || "deepseek-ai/DeepSeek-V4-Flash"}
+                    className="w-full px-4 py-2.5 rounded-xl bg-bg-primary border border-border text-text-primary text-sm font-mono focus:border-accent/40 focus:outline-none transition-colors"
+                    spellCheck={false}
+                  />
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <p className="text-xs text-text-secondary">
+                      留空则使用环境变量{" "}
+                      <code className="text-[11px]">LLM_MODEL</code>
+                      {config.defaultModelName
+                        ? `（${config.defaultModelName}）`
+                        : ""}
+                    </p>
+                    {config.modelName && (
+                      <button
+                        type="button"
+                        onClick={() => updateField("modelName", "")}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        清除覆盖
+                      </button>
+                    )}
+                  </div>
+                  {config.effectiveModelName && (
+                    <p className="mt-1 text-xs text-text-tertiary">
+                      当前实际调用：{" "}
+                      <code className="text-[11px]">{config.effectiveModelName}</code>
+                    </p>
+                  )}
                 </div>
 
                 {/* 温度 */}
